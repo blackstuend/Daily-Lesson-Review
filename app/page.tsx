@@ -1,8 +1,12 @@
 import { Button } from "@/components/ui/button"
+import { LogoutButton } from "@/components/logout-button"
+import { getCurrentUser } from "@/lib/supabase/server"
 import { BookOpen, Calendar, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 
-export default function HomePage() {
+export default async function HomePage() {
+  const user = await getCurrentUser()
+
   return (
     <div className="flex min-h-svh flex-col">
       <header className="border-b">
@@ -14,12 +18,23 @@ export default function HomePage() {
             </Link>
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" asChild>
-              <Link href="/auth/login">Login</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/auth/sign-up">Sign up</Link>
-            </Button>
+            {user ? (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link href="/dashboard">Dashboard</Link>
+                </Button>
+                <LogoutButton variant="ghost" />
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link href="/auth/login">Login</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/auth/sign-up">Sign up</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>

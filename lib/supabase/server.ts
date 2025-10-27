@@ -1,6 +1,7 @@
 import { cache } from "react"
 
 import { createServerClient } from "@supabase/ssr"
+import { AuthError } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
 
 export const getSupabaseServerClient = cache(() => {
@@ -37,6 +38,13 @@ export const getCurrentUser = cache(async () => {
   } = await supabase.auth.getUser()
 
   if (error) {
+    if (
+      (error instanceof AuthError && (error.name === "AuthSessionMissingError" || error.message === "Auth session missing!")) ||
+      error.name === "AuthSessionMissingError" ||
+      error.message === "Auth session missing!"
+    ) {
+      return null
+    }
     throw error
   }
 
