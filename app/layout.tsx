@@ -14,9 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: 'Daily Lesson Review',
+  description: 'Track and review your daily lessons with spaced repetition',
 }
 
 export default function RootLayout({

@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ExternalLink, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import {
   AlertDialog,
@@ -30,6 +30,11 @@ export function ReviewCard({ review, showDate = false, showTodoStyle = false }: 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [optimisticCompleted, setOptimisticCompleted] = useState(review.completed)
   const router = useRouter()
+
+  // Sync optimistic state when review data updates from server
+  useEffect(() => {
+    setOptimisticCompleted(review.completed)
+  }, [review.completed])
 
   const intervalColors: Record<number, string> = {
     0: "bg-blue-500/10 text-blue-500",

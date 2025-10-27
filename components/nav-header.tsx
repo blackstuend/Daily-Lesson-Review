@@ -20,7 +20,9 @@ export function NavHeader() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <BookOpen className="h-6 w-6" />
-          <span className="text-lg font-semibold">Daily Lesson Review</span>
+          <Link href="/dashboard">
+              <span className="text-lg font-semibold">Daily Lesson Review</span>
+          </Link>
         </div>
         <nav className="flex items-center gap-4">
           <Link href="/dashboard" className="text-sm font-medium hover:underline">
