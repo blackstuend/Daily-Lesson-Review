@@ -39,7 +39,7 @@ export default async function HomePage() {
         </div>
       </header>
 
-      <main className="flex-1">
+      <main className="flex-1 flex flex-col">
         <section className="container mx-auto px-4 py-20 text-center">
           <h1 className="mb-4 text-4xl font-bold tracking-tight md:text-5xl">
             Master Your Learning with Spaced Repetition
@@ -53,7 +53,7 @@ export default async function HomePage() {
           </Button>
         </section>
 
-        <section className="border-t bg-muted/50 py-16">
+        <section className="border-t bg-muted/50 py-16 mt-auto">
           <div className="container mx-auto px-4">
             <div className="grid gap-8 md:grid-cols-3">
               <div className="flex flex-col items-center text-center">
