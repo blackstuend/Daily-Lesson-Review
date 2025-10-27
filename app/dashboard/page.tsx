@@ -1,33 +1,46 @@
-import { createClient } from "@/lib/supabase/server"
+"use client"
+
+import { useEffect } from "react"
+import Link from "next/link"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { BookOpen, Calendar, Plus } from "lucide-react"
-import Link from "next/link"
-import { redirect } from "next/navigation"
 import { ReviewCard } from "@/components/review-card"
+import DashboardLoading from "@/app/dashboard/loading"
+import { useDashboardStore } from "@/stores/dashboard-store"
+import { BookOpen, Calendar, Plus } from "lucide-react"
 
-export default async function DashboardPage() {
-  const supabase = await createClient()
+export default function DashboardPage() {
+  const dashboardData = useDashboardStore((state) => state.dashboardData)
+  const isLoadingDashboard = useDashboardStore((state) => state.isLoadingDashboard)
+  const dashboardError = useDashboardStore((state) => state.dashboardError)
+  const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData)
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    redirect("/auth/login")
+  useEffect(() => {
+    if (!dashboardData) {
+      void fetchDashboardData()
+    }
+  }, [dashboardData, fetchDashboardData])
+
+  if (isLoadingDashboard && !dashboardData) {
+    return <DashboardLoading />
   }
 
-  const today = new Date().toISOString().split("T")[0]
-  const { data: todayReviews } = await supabase
-    .from("review_schedule")
-    .select("*, lessons(*)")
-    .eq("review_date", today)
-    .order("completed", { ascending: true })
-    .order("created_at", { ascending: false })
+  if (dashboardError && !dashboardData) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="py-12 text-center text-destructive">
+            <p>{dashboardError}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
-  const pendingCount = todayReviews?.filter((r) => !r.completed).length || 0
-
-  // Get total lessons count
-  const { count: totalLessons } = await supabase.from("lessons").select("*", { count: "exact", head: true })
+  const pendingCount = dashboardData?.pendingCount ?? 0
+  const totalLessons = dashboardData?.totalLessons ?? 0
+  const todayReviews = dashboardData?.todayReviews ?? []
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -54,7 +67,7 @@ export default async function DashboardPage() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalLessons || 0}</div>
+            <div className="text-2xl font-bold">{totalLessons}</div>
             <p className="text-xs text-muted-foreground">Lessons in your library</p>
           </CardContent>
         </Card>
@@ -78,9 +91,9 @@ export default async function DashboardPage() {
           <CardDescription>Complete these reviews to maintain your learning streak</CardDescription>
         </CardHeader>
         <CardContent>
-          {todayReviews && todayReviews.length > 0 ? (
+          {todayReviews.length > 0 ? (
             <div className="space-y-3">
-              {todayReviews.map((review: any) => (
+              {todayReviews.map((review) => (
                 <ReviewCard key={review.id} review={review} />
               ))}
             </div>

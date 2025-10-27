@@ -1,50 +1,88 @@
-import { createClient } from "@/lib/supabase/server"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { redirect } from "next/navigation"
+"use client"
+
+import { useEffect, useMemo } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 
-export default async function CalendarPage({
-  searchParams,
-}: {
-  searchParams: { month?: string; year?: string }
-}) {
-  const supabase = await createClient()
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useDashboardStore } from "@/stores/dashboard-store"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    redirect("/auth/login")
+const monthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+]
+
+export default function CalendarPage() {
+  const searchParams = useSearchParams()
+
+  const now = useMemo(() => new Date(), [])
+  const currentMonth = useMemo(() => {
+    const value = searchParams.get("month")
+    const parsed = value ? Number.parseInt(value) : Number.NaN
+    return Number.isNaN(parsed) ? now.getMonth() : parsed
+  }, [searchParams, now])
+
+  const currentYear = useMemo(() => {
+    const value = searchParams.get("year")
+    const parsed = value ? Number.parseInt(value) : Number.NaN
+    return Number.isNaN(parsed) ? now.getFullYear() : parsed
+  }, [searchParams, now])
+
+  const fetchCalendarData = useDashboardStore((state) => state.fetchCalendarData)
+  const calendarData = useDashboardStore((state) => state.calendarData)
+  const calendarLoadingKeys = useDashboardStore((state) => state.calendarLoadingKeys)
+  const calendarError = useDashboardStore((state) => state.calendarError)
+
+  const calendarKey = `${currentYear}-${currentMonth}` as const
+  const reviews = calendarData[calendarKey] ?? []
+
+  useEffect(() => {
+    void fetchCalendarData(currentMonth, currentYear)
+  }, [fetchCalendarData, currentMonth, currentYear])
+
+  if (calendarError && !reviews.length) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="py-12 text-center text-destructive">
+            <p>{calendarError}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
-  const now = new Date()
-  const currentMonth = searchParams.month ? Number.parseInt(searchParams.month) : now.getMonth()
-  const currentYear = searchParams.year ? Number.parseInt(searchParams.year) : now.getFullYear()
+  if (calendarLoadingKeys.has(calendarKey) && !reviews.length) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8 space-y-3">
+          <div className="h-10 w-64 animate-pulse rounded bg-accent" />
+          <div className="h-5 w-72 animate-pulse rounded bg-accent" />
+        </div>
+        <div className="grid grid-cols-7 gap-2">
+          {Array.from({ length: 14 }).map((_, index) => (
+            <div key={index} className="aspect-square rounded border">
+              <div className="h-full w-full animate-pulse rounded bg-accent" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
-  // Get first and last day of the month
   const firstDay = new Date(currentYear, currentMonth, 1)
   const lastDay = new Date(currentYear, currentMonth + 1, 0)
-
-  // Get all reviews for this month
-  const { data: reviews } = await supabase
-    .from("review_schedule")
-    .select("*, lessons(*)")
-    .gte("review_date", firstDay.toISOString().split("T")[0])
-    .lte("review_date", lastDay.toISOString().split("T")[0])
-
-  // Group reviews by date
-  const reviewsByDate: Record<string, any[]> = {}
-  reviews?.forEach((review) => {
-    const date = review.review_date
-    if (!reviewsByDate[date]) {
-      reviewsByDate[date] = []
-    }
-    reviewsByDate[date].push(review)
-  })
-
-  // Calculate calendar grid
   const startingDayOfWeek = firstDay.getDay()
   const daysInMonth = lastDay.getDate()
 
@@ -53,20 +91,17 @@ export default async function CalendarPage({
   const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1
   const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear
 
-  const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ]
+  const reviewsByDate = reviews.reduce<Record<string, typeof reviews>>((acc, review) => {
+    const date = review.review_date
+    if (!acc[date]) {
+      acc[date] = []
+    }
+    acc[date].push(review)
+    return acc
+  }, {})
+
+  const completedCount = reviews.filter((review) => review.completed).length
+  const pendingCount = reviews.length - completedCount
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -106,44 +141,40 @@ export default async function CalendarPage({
               </div>
             ))}
 
-            {Array.from({ length: startingDayOfWeek }).map((_, i) => (
-              <div key={`empty-${i}`} className="aspect-square p-2" />
+            {Array.from({ length: startingDayOfWeek }).map((_, index) => (
+              <div key={`empty-${index}`} className="aspect-square p-2" />
             ))}
 
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1
+            {Array.from({ length: daysInMonth }).map((_, index) => {
+              const day = index + 1
               const date = new Date(currentYear, currentMonth, day)
               const dateString = date.toISOString().split("T")[0]
-              const dayReviews = reviewsByDate[dateString] || []
+              const dayReviews = reviewsByDate[dateString] ?? []
               const isToday =
                 date.getDate() === now.getDate() &&
                 date.getMonth() === now.getMonth() &&
                 date.getFullYear() === now.getFullYear()
 
-              const completedCount = dayReviews.filter((r) => r.completed).length
-              const totalCount = dayReviews.length
+              const completedForDay = dayReviews.filter((review) => review.completed).length
+              const totalForDay = dayReviews.length
 
               return (
                 <div
                   key={day}
-                  className={`aspect-square rounded-lg border p-2 ${
-                    isToday ? "border-primary bg-primary/5" : "hover:bg-accent"
-                  }`}
+                  className={`aspect-square rounded-lg border p-2 ${isToday ? "border-primary bg-primary/5" : "hover:bg-accent"}`}
                 >
                   <div className="flex h-full flex-col">
                     <div className="mb-1 text-sm font-medium">{day}</div>
-                    {totalCount > 0 && (
+                    {totalForDay > 0 && (
                       <div className="mt-auto space-y-1">
                         <div className="text-xs text-muted-foreground">
-                          {completedCount}/{totalCount}
+                          {completedForDay}/{totalForDay}
                         </div>
                         <div className="flex flex-wrap gap-1">
                           {dayReviews.slice(0, 3).map((review) => (
                             <div
                               key={review.id}
-                              className={`h-1.5 w-1.5 rounded-full ${
-                                review.completed ? "bg-green-500" : "bg-yellow-500"
-                              }`}
+                              className={`h-1.5 w-1.5 rounded-full ${review.completed ? "bg-green-500" : "bg-yellow-500"}`}
                             />
                           ))}
                           {dayReviews.length > 3 && (
@@ -179,15 +210,15 @@ export default async function CalendarPage({
           <CardContent className="space-y-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total Reviews:</span>
-              <span className="font-medium">{reviews?.length || 0}</span>
+              <span className="font-medium">{reviews.length}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Completed:</span>
-              <span className="font-medium text-green-600">{reviews?.filter((r) => r.completed).length || 0}</span>
+              <span className="font-medium text-green-600">{completedCount}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Pending:</span>
-              <span className="font-medium text-yellow-600">{reviews?.filter((r) => !r.completed).length || 0}</span>
+              <span className="font-medium text-yellow-600">{pendingCount}</span>
             </div>
           </CardContent>
         </Card>
@@ -198,11 +229,11 @@ export default async function CalendarPage({
           </CardHeader>
           <CardContent className="space-y-2">
             {[0, 1, 3, 7].map((interval) => {
-              const count = reviews?.filter((r) => r.review_interval === interval).length || 0
+              const count = reviews.filter((review) => review.review_interval === interval).length
               return (
                 <div key={interval} className="flex justify-between">
-                  <span className="text-muted-foreground">Day {interval}:</span>
-                  <Badge variant="outline">{count}</Badge>
+                  <span className="text-muted-foreground">{interval === 0 ? "Same Day" : `Day ${interval}`}:</span>
+                  <span className="font-medium">{count}</span>
                 </div>
               )
             })}

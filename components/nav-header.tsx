@@ -5,13 +5,16 @@ import { Button } from "@/components/ui/button"
 import { BookOpen, LogOut } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useDashboardStore } from "@/stores/dashboard-store"
 
 export function NavHeader() {
   const router = useRouter()
+  const resetDashboard = useDashboardStore((state) => state.reset)
 
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
+    resetDashboard()
     router.push("/")
   }
 
@@ -21,7 +24,7 @@ export function NavHeader() {
         <div className="flex items-center gap-2">
           <BookOpen className="h-6 w-6" />
           <Link href="/dashboard">
-              <span className="text-lg font-semibold">Daily Lesson Review</span>
+            <span className="text-lg font-semibold">Daily Lesson Review</span>
           </Link>
         </div>
         <nav className="flex items-center gap-4">

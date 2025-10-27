@@ -1,48 +1,65 @@
-import { createClient } from "@/lib/supabase/server"
+"use client"
+
+import { useEffect, useMemo } from "react"
+
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { redirect } from "next/navigation"
 import { ReviewCard } from "@/components/review-card"
+import { useDashboardStore } from "@/stores/dashboard-store"
 
-export default async function ReviewsPage() {
-  const supabase = await createClient()
+export default function ReviewsPage() {
+  const reviewsData = useDashboardStore((state) => state.reviewsData)
+  const isLoadingReviews = useDashboardStore((state) => state.isLoadingReviews)
+  const reviewsError = useDashboardStore((state) => state.reviewsError)
+  const fetchReviewsData = useDashboardStore((state) => state.fetchReviewsData)
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    redirect("/auth/login")
+  useEffect(() => {
+    if (!reviewsData) {
+      void fetchReviewsData()
+    }
+  }, [reviewsData, fetchReviewsData])
+
+  const todayPending = useMemo(() => {
+    return (reviewsData?.today ?? []).filter((review) => !review.completed).length
+  }, [reviewsData])
+
+  if (reviewsError && !reviewsData) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="py-12 text-center text-destructive">
+            <p>{reviewsError}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
-  const today = new Date().toISOString().split("T")[0]
+  if (!reviewsData && isLoadingReviews) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <div className="h-10 w-56 animate-pulse rounded bg-accent" />
+          <div className="mt-2 h-5 w-64 animate-pulse rounded bg-accent" />
+        </div>
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Card key={index} className="border-dashed">
+              <CardContent className="space-y-3 py-6">
+                <div className="h-6 w-32 animate-pulse rounded bg-accent" />
+                <div className="h-4 w-full animate-pulse rounded bg-accent" />
+                <div className="h-4 w-3/4 animate-pulse rounded bg-accent" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
-  const { data: todayReviews } = await supabase
-    .from("review_schedule")
-    .select("*, lessons(*)")
-    .eq("review_date", today)
-    .order("completed", { ascending: true })
-    .order("review_interval", { ascending: true })
-
-  // Get upcoming reviews (next 7 days)
-  const nextWeek = new Date()
-  nextWeek.setDate(nextWeek.getDate() + 7)
-  const { data: upcomingReviews } = await supabase
-    .from("review_schedule")
-    .select("*, lessons(*)")
-    .gt("review_date", today)
-    .lte("review_date", nextWeek.toISOString().split("T")[0])
-    .order("review_date", { ascending: true })
-
-  // Get past reviews
-  const { data: pastReviews } = await supabase
-    .from("review_schedule")
-    .select("*, lessons(*)")
-    .lt("review_date", today)
-    .eq("completed", true)
-    .order("completed_at", { ascending: false })
-    .limit(20)
-
-  const todayPending = todayReviews?.filter((r: any) => !r.completed).length || 0
+  const todayReviews = reviewsData?.today ?? []
+  const upcomingReviews = reviewsData?.upcoming ?? []
+  const pastReviews = reviewsData?.past ?? []
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -66,9 +83,9 @@ export default async function ReviewsPage() {
         </TabsList>
 
         <TabsContent value="today" className="space-y-4">
-          {todayReviews && todayReviews.length > 0 ? (
+          {todayReviews.length > 0 ? (
             <div className="space-y-3">
-              {todayReviews.map((review: any) => (
+              {todayReviews.map((review) => (
                 <ReviewCard key={review.id} review={review} showTodoStyle />
               ))}
             </div>
@@ -82,9 +99,9 @@ export default async function ReviewsPage() {
         </TabsContent>
 
         <TabsContent value="upcoming" className="space-y-4">
-          {upcomingReviews && upcomingReviews.length > 0 ? (
+          {upcomingReviews.length > 0 ? (
             <div className="space-y-3">
-              {upcomingReviews.map((review: any) => (
+              {upcomingReviews.map((review) => (
                 <ReviewCard key={review.id} review={review} showDate />
               ))}
             </div>
@@ -98,9 +115,9 @@ export default async function ReviewsPage() {
         </TabsContent>
 
         <TabsContent value="completed" className="space-y-4">
-          {pastReviews && pastReviews.length > 0 ? (
+          {pastReviews.length > 0 ? (
             <div className="space-y-3">
-              {pastReviews.map((review: any) => (
+              {pastReviews.map((review) => (
                 <ReviewCard key={review.id} review={review} showDate />
               ))}
             </div>
