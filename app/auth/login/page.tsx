@@ -43,7 +43,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${location.origin}/auth/callback`,
+          redirectTo: `https://v0-daily-lesson-review.vercel.app/auth/callback`,
         },
       })
       if (error) throw error
