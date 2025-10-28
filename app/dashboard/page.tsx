@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import { ReviewCard } from "@/components/review-card"
 import DashboardLoading from "@/app/dashboard/loading"
 import { useDashboardStore } from "@/stores/dashboard-store"
@@ -39,9 +40,11 @@ export default function DashboardPage() {
     )
   }
 
-  const pendingCount = dashboardData?.pendingCount ?? 0
   const totalLessons = dashboardData?.totalLessons ?? 0
   const todayReviews = dashboardData?.todayReviews ?? []
+  const todayPendingReviews = todayReviews.filter((review) => !review.completed)
+  const todayCompletedReviews = todayReviews.filter((review) => review.completed)
+  const pendingCount = todayPendingReviews.length
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -88,21 +91,41 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Review Schedule</CardTitle>
-          <CardDescription>Complete these reviews to maintain your learning streak</CardDescription>
+          <CardTitle>Today&apos;s Review Lessons</CardTitle>
+          <CardDescription>See what still needs attention and what you&apos;ve already finished today</CardDescription>
         </CardHeader>
-        <CardContent>
-          {todayReviews.length > 0 ? (
-            <div className="space-y-3">
-              {todayReviews.map((review) => (
-                <ReviewCard key={review.id} review={review} />
-              ))}
-            </div>
-          ) : (
-            <div className="py-8 text-center text-muted-foreground">
-              <p>No reviews scheduled for today. Great job staying on track!</p>
-            </div>
-          )}
+        <CardContent className="space-y-6">
+          <div>
+            <h3 className="mb-3 text-sm font-semibold uppercase text-muted-foreground">Pending</h3>
+            {todayPendingReviews.length > 0 ? (
+              <div className="space-y-3">
+                {todayPendingReviews.map((review) => (
+                  <ReviewCard key={review.id} review={review} showTodoStyle />
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">
+                <p>You&apos;re all caught up for today. Nice work!</p>
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
+          <div>
+            <h3 className="mb-3 text-sm font-semibold uppercase text-muted-foreground">Completed Today</h3>
+            {todayCompletedReviews.length > 0 ? (
+              <div className="space-y-3">
+                {todayCompletedReviews.map((review) => (
+                  <ReviewCard key={review.id} review={review} allowRevert />
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">
+                <p>No completed lessons yet. Mark a lesson complete to see it here.</p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

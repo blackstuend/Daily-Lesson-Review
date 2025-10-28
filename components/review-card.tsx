@@ -2,8 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ExternalLink, Trash2 } from "lucide-react"
+import { ExternalLink, Trash2, Undo2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
@@ -24,9 +23,15 @@ interface ReviewCardProps {
   review: any
   showDate?: boolean
   showTodoStyle?: boolean
+  allowRevert?: boolean
 }
 
-export function ReviewCard({ review, showDate = false, showTodoStyle = false }: ReviewCardProps) {
+export function ReviewCard({
+  review,
+  showDate = false,
+  showTodoStyle = false,
+  allowRevert = false,
+}: ReviewCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [optimisticCompleted, setOptimisticCompleted] = useState(review.completed)
@@ -87,18 +92,7 @@ export function ReviewCard({ review, showDate = false, showTodoStyle = false }: 
 
   return (
     <>
-      <div
-        className={`flex items-center gap-3 rounded-lg border p-4 ${optimisticCompleted && showTodoStyle ? "bg-muted/50" : ""}`}
-      >
-        {/* Todo-style checkbox for today's reviews */}
-        {showTodoStyle && (
-          <Checkbox
-            checked={optimisticCompleted}
-            onCheckedChange={handleToggleComplete}
-            className="mt-1"
-          />
-        )}
-
+      <div className={`flex items-start gap-3 rounded-lg border p-4 ${optimisticCompleted && showTodoStyle ? "bg-muted/50" : ""}`}>
         <div className="flex-1">
           <div className="mb-1 flex items-center gap-2">
             <h3
@@ -123,12 +117,22 @@ export function ReviewCard({ review, showDate = false, showTodoStyle = false }: 
           )}
         </div>
 
-        <div className="ml-4 flex gap-2">
+        <div className="ml-4 flex flex-wrap gap-2">
           {review.lessons.lesson_type === "link" && review.lessons.link_url && (
             <Button variant="ghost" size="sm" asChild>
               <a href={review.lessons.link_url} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-4 w-4" />
               </a>
+            </Button>
+          )}
+          {showTodoStyle && !optimisticCompleted && (
+            <Button size="sm" onClick={handleToggleComplete}>
+              Finish
+            </Button>
+          )}
+          {showTodoStyle && optimisticCompleted && (
+            <Button variant="outline" size="sm" onClick={handleToggleComplete}>
+              Reopen
             </Button>
           )}
           {!optimisticCompleted && !showTodoStyle && (
@@ -139,6 +143,12 @@ export function ReviewCard({ review, showDate = false, showTodoStyle = false }: 
           {showTodoStyle && !optimisticCompleted && (
             <Button variant="outline" size="sm" asChild>
               <Link href={`/dashboard/review/${review.id}`}>View</Link>
+            </Button>
+          )}
+          {allowRevert && optimisticCompleted && !showTodoStyle && (
+            <Button variant="outline" size="sm" onClick={handleToggleComplete}>
+              <Undo2 className="h-4 w-4" />
+              <span className="ml-2">Revert</span>
             </Button>
           )}
           <Button
