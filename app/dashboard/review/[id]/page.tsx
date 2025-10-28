@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { ExternalLink, CheckCircle2, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { use, useEffect, useState } from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +18,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-export default function ReviewPage({ params }: { params: { id: string } }) {
+export default function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const [review, setReview] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isCompleting, setIsCompleting] = useState(false)
@@ -29,14 +30,14 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     async function loadReview() {
       const supabase = createClient()
-      const { data } = await supabase.from("review_schedule").select("*, lessons(*)").eq("id", params.id).single()
+      const { data } = await supabase.from("review_schedule").select("*, lessons(*)").eq("id", id).single()
 
       setReview(data)
       setIsLoading(false)
     }
 
     loadReview()
-  }, [params.id])
+  }, [id])
 
   const handleComplete = async () => {
     setIsCompleting(true)
@@ -48,7 +49,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
         completed: true,
         completed_at: new Date().toISOString(),
       })
-      .eq("id", params.id)
+      .eq("id", id)
 
     if (!error) {
       router.push("/dashboard/reviews")
@@ -60,7 +61,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
     setIsDeleting(true)
     const supabase = createClient()
 
-    const { error } = await supabase.from("review_schedule").delete().eq("id", params.id)
+    const { error } = await supabase.from("review_schedule").delete().eq("id", id)
 
     if (!error) {
       router.push("/dashboard/reviews")

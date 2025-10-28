@@ -3,7 +3,7 @@ create table if not exists public.lessons (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   title text not null,
-  content text not null,
+  content text,
   lesson_type text not null check (lesson_type in ('link', 'word', 'sentence')),
   link_url text,
   created_at timestamptz not null default now(),

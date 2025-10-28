@@ -107,12 +107,11 @@ export default function AddLessonPage() {
                 id="content"
                 placeholder={
                   lessonType === "link"
-                    ? "Add notes about this link..."
+                    ? "Add notes about this link (optional)..."
                     : lessonType === "word"
-                      ? "Enter the definition..."
-                      : "Enter the sentence..."
+                      ? "Enter the definition (optional)..."
+                      : "Enter the sentence (optional)..."
                 }
-                required
                 rows={5}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
