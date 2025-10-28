@@ -1,68 +1,16 @@
-"use client"
-
-import { useEffect, useMemo } from "react"
-import { usePathname } from "next/navigation"
-
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ReviewCard } from "@/components/review-card"
-import { useDashboardStore } from "@/stores/dashboard-store"
+import { getReviewsData } from "@/lib/dashboard"
 
-export default function ReviewsPage() {
-  const reviewsData = useDashboardStore((state) => state.reviewsData)
-  const isLoadingReviews = useDashboardStore((state) => state.isLoadingReviews)
-  const reviewsError = useDashboardStore((state) => state.reviewsError)
-  const fetchReviewsData = useDashboardStore((state) => state.fetchReviewsData)
-  const pathname = usePathname()
+export default async function ReviewsPage() {
+  const reviewsData = await getReviewsData()
 
-  useEffect(() => {
-    // Fetch data on mount or when navigating to this page
-    if (!reviewsData) {
-      void fetchReviewsData()
-    }
-  }, [pathname, reviewsData, fetchReviewsData])
+  const todayReviews = reviewsData.today
+  const upcomingReviews = reviewsData.upcoming
+  const pastReviews = reviewsData.past
 
-  const todayPending = useMemo(() => {
-    return (reviewsData?.today ?? []).filter((review) => !review.completed).length
-  }, [reviewsData])
-
-  if (reviewsError && !reviewsData) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardContent className="py-12 text-center text-destructive">
-            <p>{reviewsError}</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (!reviewsData && isLoadingReviews) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <div className="h-10 w-56 animate-pulse rounded bg-accent" />
-          <div className="mt-2 h-5 w-64 animate-pulse rounded bg-accent" />
-        </div>
-        <div className="space-y-4">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Card key={index} className="border-dashed">
-              <CardContent className="space-y-3 py-6">
-                <div className="h-6 w-32 animate-pulse rounded bg-accent" />
-                <div className="h-4 w-full animate-pulse rounded bg-accent" />
-                <div className="h-4 w-3/4 animate-pulse rounded bg-accent" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  const todayReviews = reviewsData?.today ?? []
-  const upcomingReviews = reviewsData?.upcoming ?? []
-  const pastReviews = reviewsData?.past ?? []
+  const todayPending = todayReviews.filter((review) => !review.completed).length
 
   return (
     <div className="container mx-auto px-4 py-8">

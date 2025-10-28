@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ExternalLink, Trash2, Undo2 } from "lucide-react"
+import { ExternalLink, Trash2, Undo2, Calendar as CalendarIcon, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
@@ -17,6 +17,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { format } from "date-fns"
 
 interface ReviewCardProps {
   review: any
@@ -35,6 +42,8 @@ export function ReviewCard({
   const [isUpdating, setIsUpdating] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [optimisticCompleted, setOptimisticCompleted] = useState(review.completed)
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const router = useRouter()
 
   // Sync optimistic state when review data updates from server
@@ -90,6 +99,32 @@ export function ReviewCard({
       router.refresh()
       setIsUpdating(false)
     }
+  }
+
+  const handleMoveToDate = async (date: Date) => {
+    setIsUpdating(true)
+    setShowDatePicker(false)
+
+    const supabase = createClient()
+    const newDate = format(date, "yyyy-MM-dd")
+
+    const { error } = await supabase
+      .from("review_schedule")
+      .update({
+        review_date: newDate,
+      })
+      .eq("id", review.id)
+
+    if (!error) {
+      router.refresh()
+    }
+    setIsUpdating(false)
+  }
+
+  const handleMoveToTomorrow = async () => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    await handleMoveToDate(tomorrow)
   }
 
   return (
@@ -161,11 +196,45 @@ export function ReviewCard({
               <span className="ml-2">Revert</span>
             </Button>
           )}
+          {!optimisticCompleted && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMoveToTomorrow}
+                disabled={isLoading}
+                title="Move to tomorrow"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Popover open={showDatePicker} onOpenChange={setShowDatePicker}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={isLoading} title="Move to specific date">
+                    <CalendarIcon className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setSelectedDate(date)
+                        handleMoveToDate(date)
+                      }
+                    }}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                  />
+                </PopoverContent>
+              </Popover>
+            </>
+          )}
           <Button
             variant="destructive"
             size="sm"
             onClick={() => setShowDeleteDialog(true)}
             disabled={isLoading}
+            className="cursor-pointer"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
