@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,12 +16,12 @@ export default function DashboardPage() {
   const isLoadingDashboard = useDashboardStore((state) => state.isLoadingDashboard)
   const dashboardError = useDashboardStore((state) => state.dashboardError)
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData)
+  const pathname = usePathname()
 
   useEffect(() => {
-    if (!dashboardData) {
-      void fetchDashboardData()
-    }
-  }, [dashboardData, fetchDashboardData])
+    // Always refresh when visiting the dashboard to avoid stale data after mutations
+    void fetchDashboardData(true)
+  }, [pathname, fetchDashboardData])
 
   if (isLoadingDashboard && !dashboardData) {
     return <DashboardLoading />

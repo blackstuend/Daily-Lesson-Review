@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo } from "react"
+import { usePathname } from "next/navigation"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -12,12 +13,14 @@ export default function ReviewsPage() {
   const isLoadingReviews = useDashboardStore((state) => state.isLoadingReviews)
   const reviewsError = useDashboardStore((state) => state.reviewsError)
   const fetchReviewsData = useDashboardStore((state) => state.fetchReviewsData)
+  const pathname = usePathname()
 
   useEffect(() => {
+    // Fetch data on mount or when navigating to this page
     if (!reviewsData) {
       void fetchReviewsData()
     }
-  }, [reviewsData, fetchReviewsData])
+  }, [pathname, reviewsData, fetchReviewsData])
 
   const todayPending = useMemo(() => {
     return (reviewsData?.today ?? []).filter((review) => !review.completed).length

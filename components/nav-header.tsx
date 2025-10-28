@@ -34,6 +34,9 @@ export function NavHeader() {
           <Link href="/dashboard/add" className="text-sm font-medium hover:underline">
             Add Lesson
           </Link>
+          <Link href="/dashboard/lessons" className="text-sm font-medium hover:underline">
+            Lessons
+          </Link>
           <Link href="/dashboard/reviews" className="text-sm font-medium hover:underline">
             Reviews
           </Link>

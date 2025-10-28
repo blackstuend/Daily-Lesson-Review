@@ -6,6 +6,7 @@ create table if not exists public.lessons (
   content text,
   lesson_type text not null check (lesson_type in ('link', 'word', 'sentence')),
   link_url text,
+  lesson_date timestamptz not null default now(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

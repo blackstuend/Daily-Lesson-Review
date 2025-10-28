@@ -37,11 +37,11 @@ type DashboardStore = {
   dashboardData: DashboardData | null
   isLoadingDashboard: boolean
   dashboardError?: string
-  fetchDashboardData: () => Promise<void>
+  fetchDashboardData: (force?: boolean) => Promise<void>
   reviewsData: ReviewsData | null
   isLoadingReviews: boolean
   reviewsError?: string
-  fetchReviewsData: () => Promise<void>
+  fetchReviewsData: (force?: boolean) => Promise<void>
   calendarData: Record<CalendarKey, ReviewWithLesson[]>
   calendarLoadingKeys: Set<CalendarKey>
   calendarError?: string
@@ -93,9 +93,9 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     }
   },
 
-  fetchDashboardData: async () => {
+  fetchDashboardData: async (force = false) => {
     const { dashboardData, isLoadingDashboard } = get()
-    if (dashboardData || isLoadingDashboard) {
+    if (!force && (dashboardData || isLoadingDashboard)) {
       return
     }
 
@@ -141,9 +141,9 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     }
   },
 
-  fetchReviewsData: async () => {
+  fetchReviewsData: async (force = false) => {
     const { reviewsData, isLoadingReviews } = get()
-    if (reviewsData || isLoadingReviews) {
+    if (!force && (reviewsData || isLoadingReviews)) {
       return
     }
 

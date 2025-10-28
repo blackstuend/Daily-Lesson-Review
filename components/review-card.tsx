@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useDashboardStore } from "@/stores/dashboard-store"
 
 interface ReviewCardProps {
   review: any
@@ -30,6 +31,7 @@ export function ReviewCard({ review, showDate = false, showTodoStyle = false }: 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [optimisticCompleted, setOptimisticCompleted] = useState(review.completed)
   const router = useRouter()
+  const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData)
 
   // Sync optimistic state when review data updates from server
   useEffect(() => {
@@ -51,6 +53,7 @@ export function ReviewCard({ review, showDate = false, showTodoStyle = false }: 
     const { error } = await supabase.from("review_schedule").delete().eq("id", review.id)
 
     if (!error) {
+      await fetchDashboardData(true)
       router.refresh()
     }
     setIsDeleting(false)
@@ -76,6 +79,7 @@ export function ReviewCard({ review, showDate = false, showTodoStyle = false }: 
       // Revert optimistic update on error
       setOptimisticCompleted(!newCompletedState)
     } else {
+      await fetchDashboardData(true)
       // Refresh to sync with server
       router.refresh()
     }
@@ -138,11 +142,10 @@ export function ReviewCard({ review, showDate = false, showTodoStyle = false }: 
             </Button>
           )}
           <Button
-            variant="ghost"
+            variant="destructive"
             size="sm"
             onClick={() => setShowDeleteDialog(true)}
             disabled={isDeleting}
-            className="text-destructive hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -162,7 +165,7 @@ export function ReviewCard({ review, showDate = false, showTodoStyle = false }: 
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-white hover:bg-destructive/90"
             >
               {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>

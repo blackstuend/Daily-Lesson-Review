@@ -1,71 +1,96 @@
 "use client"
 
-import type React from "react"
-
+import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { useDashboardStore } from "@/stores/dashboard-store"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { useDashboardStore } from "@/stores/dashboard-store"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
-export default function AddLessonPage() {
-  const [title, setTitle] = useState("")
-  const [content, setContent] = useState("")
-  const [lessonType, setLessonType] = useState<"link" | "word" | "sentence">("word")
-  const [linkUrl, setLinkUrl] = useState("")
+type Lesson = {
+  id: string
+  title: string
+  content: string | null
+  lesson_type: "link" | "word" | "sentence"
+  link_url: string | null
+  lesson_date: string
+}
+
+interface EditLessonDialogProps {
+  lesson: Lesson
+  onClose: (saved?: boolean) => void
+}
+
+export function EditLessonDialog({ lesson, onClose }: EditLessonDialogProps) {
+  const [title, setTitle] = useState(lesson.title)
+  const [content, setContent] = useState(lesson.content || "")
+  const [lessonType, setLessonType] = useState<"link" | "word" | "sentence">(lesson.lesson_type)
+  const [linkUrl, setLinkUrl] = useState(lesson.link_url || "")
   const [lessonDate, setLessonDate] = useState<Date>(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    return today
+    const initial = lesson.lesson_date ? new Date(lesson.lesson_date) : new Date()
+    initial.setHours(0, 0, 0, 0)
+    return initial
   })
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData)
+
+  // Reset form when lesson changes
+  useEffect(() => {
+    setTitle(lesson.title)
+    setContent(lesson.content || "")
+    setLessonType(lesson.lesson_type)
+    setLinkUrl(lesson.link_url || "")
+    const nextDate = lesson.lesson_date ? new Date(lesson.lesson_date) : new Date()
+    nextDate.setHours(0, 0, 0, 0)
+    setLessonDate(nextDate)
+    setIsDatePickerOpen(false)
+  }, [lesson])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
-    const selectedDate = new Date(lessonDate)
-    selectedDate.setHours(0, 0, 0, 0)
-    const lessonDateIso = selectedDate.toISOString()
+
+    const supabase = createClient()
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) throw new Error("Not authenticated")
+      const selectedDate = new Date(lessonDate)
+      selectedDate.setHours(0, 0, 0, 0)
+      const lessonDateIso = selectedDate.toISOString()
 
-      const { error: insertError } = await supabase.from("lessons").insert({
-        user_id: user.id,
-        title,
-        content: content || null,
-        lesson_type: lessonType,
-        link_url: lessonType === "link" ? linkUrl : null,
-        lesson_date: lessonDateIso,
-      })
+      const { error: updateError } = await supabase
+        .from("lessons")
+        .update({
+          title,
+          content: content || null,
+          lesson_type: lessonType,
+          link_url: lessonType === "link" ? linkUrl : null,
+          lesson_date: lessonDateIso,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", lesson.id)
 
-      if (insertError) throw insertError
+      if (updateError) throw updateError
 
-      // Force refresh dashboard data to update stats
       await fetchDashboardData(true)
-
-      // Redirect to dashboard
-      router.push("/dashboard")
-      router.refresh()
+      onClose(true)
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
     } finally {
@@ -74,18 +99,18 @@ export default function AddLessonPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Add New Lesson</CardTitle>
-          <CardDescription>Save a link, word, or sentence to review later</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+    <Dialog open={true} onOpenChange={() => onClose(false)}>
+      <DialogContent className="sm:max-w-[525px]">
+        <DialogHeader>
+          <DialogTitle>Edit Lesson</DialogTitle>
+          <DialogDescription>Make changes to your lesson. Click save when you're done.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="lesson-type">Lesson Type</Label>
+              <Label htmlFor="edit-lesson-type">Lesson Type</Label>
               <Select value={lessonType} onValueChange={(value: any) => setLessonType(value)}>
-                <SelectTrigger id="lesson-type">
+                <SelectTrigger id="edit-lesson-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -97,9 +122,9 @@ export default function AddLessonPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
+              <Label htmlFor="edit-title">Title</Label>
               <Input
-                id="title"
+                id="edit-title"
                 placeholder="e.g., 'Ephemeral' or 'React Hooks Tutorial'"
                 required
                 value={title}
@@ -109,9 +134,9 @@ export default function AddLessonPage() {
 
             {lessonType === "link" && (
               <div className="space-y-2">
-                <Label htmlFor="link-url">URL</Label>
+                <Label htmlFor="edit-link-url">URL</Label>
                 <Input
-                  id="link-url"
+                  id="edit-link-url"
                   type="url"
                   placeholder="https://example.com/article"
                   required
@@ -157,11 +182,11 @@ export default function AddLessonPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="content">
+              <Label htmlFor="edit-content">
                 {lessonType === "link" ? "Notes" : lessonType === "word" ? "Definition" : "Sentence"}
               </Label>
               <Textarea
-                id="content"
+                id="edit-content"
                 placeholder={
                   lessonType === "link"
                     ? "Add notes about this link (optional)..."
@@ -176,18 +201,17 @@ export default function AddLessonPage() {
             </div>
 
             {error && <p className="text-sm text-destructive">{error}</p>}
-
-            <div className="flex gap-4">
-              <Button type="submit" disabled={isLoading} className="flex-1">
-                {isLoading ? "Adding..." : "Add Lesson"}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => router.back()}>
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onClose(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

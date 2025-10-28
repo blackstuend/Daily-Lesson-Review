@@ -1,12 +1,15 @@
 "use client"
 
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
 import { useDashboardStore } from "@/stores/dashboard-store"
 import { ChevronLeft, ChevronRight } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 const monthNames = [
   "January",
@@ -46,6 +49,7 @@ export default function CalendarPage() {
 
   const calendarKey = `${currentYear}-${currentMonth}` as const
   const reviews = calendarData[calendarKey] ?? []
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   useEffect(() => {
     void fetchCalendarData(currentMonth, currentYear)
@@ -102,6 +106,14 @@ export default function CalendarPage() {
 
   const completedCount = reviews.filter((review) => review.completed).length
   const pendingCount = reviews.length - completedCount
+  const selectedReviews = selectedDate ? reviewsByDate[selectedDate] ?? [] : []
+  const selectedDateLabel = selectedDate
+    ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString(undefined, {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
+    : ""
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -148,42 +160,55 @@ export default function CalendarPage() {
             {Array.from({ length: daysInMonth }).map((_, index) => {
               const day = index + 1
               const date = new Date(currentYear, currentMonth, day)
-              const dateString = date.toISOString().split("T")[0]
+              const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
               const dayReviews = reviewsByDate[dateString] ?? []
               const isToday =
                 date.getDate() === now.getDate() &&
                 date.getMonth() === now.getMonth() &&
                 date.getFullYear() === now.getFullYear()
 
-              const completedForDay = dayReviews.filter((review) => review.completed).length
-              const totalForDay = dayReviews.length
-
               return (
-                <div
-                  key={day}
-                  className={`aspect-square rounded-lg border p-2 ${isToday ? "border-primary bg-primary/5" : "hover:bg-accent"}`}
-                >
-                  <div className="flex h-full flex-col">
-                    <div className="mb-1 text-sm font-medium">{day}</div>
-                    {totalForDay > 0 && (
-                      <div className="mt-auto space-y-1">
-                        <div className="text-xs text-muted-foreground">
-                          {completedForDay}/{totalForDay}
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {dayReviews.slice(0, 3).map((review) => (
+                <div key={day} className="aspect-square">
+                  <button
+                    type="button"
+                    onClick={() => dayReviews.length && setSelectedDate(dateString)}
+                    className={cn(
+                      "flex h-full w-full flex-col rounded-lg border p-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                      isToday ? "border-primary bg-primary/5" : "hover:bg-accent",
+                      dayReviews.length ? "cursor-pointer" : "cursor-default opacity-60 hover:bg-transparent"
+                    )}
+                    disabled={!dayReviews.length}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-semibold">{day}</div>
+                      {dayReviews.length > 0 && (
+                        <div className="text-xs text-muted-foreground">{dayReviews.length}</div>
+                      )}
+                    </div>
+
+                    {dayReviews.length > 0 && (
+                      <div className="mt-2 space-y-1 overflow-hidden">
+                        {dayReviews.slice(0, 3).map((review) => {
+                          const lessonTitle = review.lessons?.title ?? "Untitled lesson"
+                          return (
                             <div
                               key={review.id}
-                              className={`h-1.5 w-1.5 rounded-full ${review.completed ? "bg-green-500" : "bg-yellow-500"}`}
-                            />
-                          ))}
-                          {dayReviews.length > 3 && (
-                            <div className="text-xs text-muted-foreground">+{dayReviews.length - 3}</div>
-                          )}
-                        </div>
+                              className={cn(
+                                "truncate text-xs leading-tight",
+                                review.completed ? "text-emerald-600" : "text-amber-600"
+                              )}
+                              title={lessonTitle}
+                            >
+                              - {lessonTitle}
+                            </div>
+                          )
+                        })}
+                        {dayReviews.length > 3 && (
+                          <div className="truncate text-xs text-muted-foreground">More...</div>
+                        )}
                       </div>
                     )}
-                  </div>
+                  </button>
                 </div>
               )
             })}
@@ -201,6 +226,47 @@ export default function CalendarPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={!!selectedDate} onOpenChange={(open) => !open && setSelectedDate(null)}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{selectedDateLabel}</DialogTitle>
+            <DialogDescription>
+              {selectedReviews.length
+                ? "Review the lessons scheduled for this day."
+                : "No reviews scheduled for this date."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedReviews.length > 0 && (
+            <div className="space-y-3">
+              {selectedReviews.map((review) => {
+                const lessonTitle = review.lessons?.title ?? "Untitled lesson"
+                const lessonTypeLabel = review.lessons?.lesson_type ?? "lesson"
+                return (
+                  <div key={review.id} className="rounded-lg border p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium leading-snug">{lessonTitle}</p>
+                        <p className="text-sm text-muted-foreground capitalize">{lessonTypeLabel}</p>
+                      </div>
+                      <Badge variant={review.completed ? "secondary" : "outline"} className="whitespace-nowrap">
+                        {review.completed ? "Completed" : "Pending"}
+                      </Badge>
+                    </div>
+                    <Link
+                      href={`/dashboard/review/${review.id}`}
+                      className="mt-2 inline-flex text-sm text-primary hover:underline"
+                    >
+                      View review
+                    </Link>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         <Card>
