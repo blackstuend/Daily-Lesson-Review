@@ -17,7 +17,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { useDashboardStore } from "@/stores/dashboard-store"
 
 interface ReviewCardProps {
   review: any
@@ -36,7 +35,6 @@ export function ReviewCard({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [optimisticCompleted, setOptimisticCompleted] = useState(review.completed)
   const router = useRouter()
-  const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData)
 
   // Sync optimistic state when review data updates from server
   useEffect(() => {
@@ -58,7 +56,6 @@ export function ReviewCard({
     const { error } = await supabase.from("review_schedule").delete().eq("id", review.id)
 
     if (!error) {
-      await fetchDashboardData(true)
       router.refresh()
     }
     setIsDeleting(false)
@@ -84,7 +81,6 @@ export function ReviewCard({
       // Revert optimistic update on error
       setOptimisticCompleted(!newCompletedState)
     } else {
-      await fetchDashboardData(true)
       // Refresh to sync with server
       router.refresh()
     }

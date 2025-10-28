@@ -1,47 +1,17 @@
-"use client"
-
-import { useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ReviewCard } from "@/components/review-card"
-import DashboardLoading from "@/app/dashboard/loading"
-import { useDashboardStore } from "@/stores/dashboard-store"
+import { getDashboardData } from "@/lib/dashboard"
 import { BookOpen, Calendar, Plus } from "lucide-react"
 
-export default function DashboardPage() {
-  const dashboardData = useDashboardStore((state) => state.dashboardData)
-  const isLoadingDashboard = useDashboardStore((state) => state.isLoadingDashboard)
-  const dashboardError = useDashboardStore((state) => state.dashboardError)
-  const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData)
-  const pathname = usePathname()
+export default async function DashboardPage() {
+  const dashboardData = await getDashboardData()
 
-  useEffect(() => {
-    // Always refresh when visiting the dashboard to avoid stale data after mutations
-    void fetchDashboardData(true)
-  }, [pathname, fetchDashboardData])
-
-  if (isLoadingDashboard && !dashboardData) {
-    return <DashboardLoading />
-  }
-
-  if (dashboardError && !dashboardData) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardContent className="py-12 text-center text-destructive">
-            <p>{dashboardError}</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const totalLessons = dashboardData?.totalLessons ?? 0
-  const todayReviews = dashboardData?.todayReviews ?? []
+  const totalLessons = dashboardData.totalLessons
+  const todayReviews = dashboardData.todayReviews
   const todayPendingReviews = todayReviews.filter((review) => !review.completed)
   const todayCompletedReviews = todayReviews.filter((review) => review.completed)
   const pendingCount = todayPendingReviews.length
