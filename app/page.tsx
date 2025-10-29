@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button"
 import { LogoutButton } from "@/components/logout-button"
 import { getCurrentUser } from "@/lib/supabase/server"
-import { BookOpen, Calendar, CheckCircle2 } from "lucide-react"
+import { BookOpen, Calendar, CheckCircle2, Menu } from "lucide-react"
 import Link from "next/link"
+import { Sheet, SheetClose, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 
 export default async function HomePage() {
   const user = await getCurrentUser()
@@ -17,7 +18,7 @@ export default async function HomePage() {
               <span className="text-lg font-semibold">Daily Lesson Review</span>
             </Link>
           </div>
-          <div className="flex gap-2">
+          <div className="hidden items-center gap-2 md:flex">
             {user ? (
               <>
                 <Button variant="ghost" asChild>
@@ -36,6 +37,54 @@ export default async function HomePage() {
               </>
             )}
           </div>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Open navigation</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="p-0">
+              <SheetHeader className="sr-only">
+                <SheetTitle>Navigation menu</SheetTitle>
+              </SheetHeader>
+              <div className="flex h-full flex-col">
+                <div className="border-b p-4">
+                  <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
+                    <BookOpen className="h-5 w-5" />
+                    Daily Lesson Review
+                  </Link>
+                </div>
+                <div className="flex flex-col gap-2 p-4">
+                  {user ? (
+                    <>
+                      <SheetClose asChild>
+                        <Button variant="ghost" asChild className="justify-start">
+                          <Link href="/dashboard">Dashboard</Link>
+                        </Button>
+                      </SheetClose>
+                      <SheetClose asChild>
+                        <LogoutButton variant="ghost" className="justify-start" />
+                      </SheetClose>
+                    </>
+                  ) : (
+                    <>
+                      <SheetClose asChild>
+                        <Button variant="ghost" asChild className="justify-start">
+                          <Link href="/auth/login">Login</Link>
+                        </Button>
+                      </SheetClose>
+                      <SheetClose asChild>
+                        <Button className="justify-start" asChild>
+                          <Link href="/auth/sign-up">Sign up</Link>
+                        </Button>
+                      </SheetClose>
+                    </>
+                  )}
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </header>
 

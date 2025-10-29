@@ -9,6 +9,7 @@ import { getSessionErrorMessage } from "@/lib/auth-error-handler"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
+import { BookOpen, Calendar, CheckCircle2 } from "lucide-react"
 
 function GoogleIcon() {
   return (
@@ -67,36 +68,83 @@ function LoginPageContent() {
   }
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Login</CardTitle>
-            <CardDescription>Sign in with Google to access your learning dashboard</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-4">
-              {sessionWarning && (
-                <Alert variant="destructive">
-                  <AlertDescription>{sessionWarning}</AlertDescription>
-                </Alert>
-              )}
+    <div className="flex min-h-svh flex-col bg-background lg:flex-row">
+      <div className="flex flex-1 items-center justify-center p-6 sm:p-10">
+        <div className="w-full max-w-sm">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">Login</CardTitle>
+              <CardDescription>Sign in with Google to access your learning dashboard</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-4">
+                {sessionWarning && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{sessionWarning}</AlertDescription>
+                  </Alert>
+                )}
 
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                disabled={isGoogleLoading}
-                onClick={handleGoogleLogin}
-              >
-                <GoogleIcon />
-                {isGoogleLoading ? "Connecting..." : "Continue with Google"}
-              </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={isGoogleLoading}
+                  onClick={handleGoogleLogin}
+                >
+                  <GoogleIcon />
+                  {isGoogleLoading ? "Connecting..." : "Continue with Google"}
+                </Button>
 
-              {error && <p className="text-sm text-destructive">{error}</p>}
+                {error && <p className="text-sm text-destructive">{error}</p>}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <div className="relative hidden flex-1 items-center justify-center overflow-hidden bg-muted lg:flex">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" />
+        <div className="relative z-10 mx-auto flex w-full max-w-lg flex-col gap-8 px-12 py-16 text-center lg:text-left">
+          <div>
+            <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background px-4 py-2 text-sm font-medium text-primary">
+              <Calendar className="h-4 w-4" />
+              Build your review habit
+            </span>
+            <h2 className="text-3xl font-semibold text-foreground">
+              Learn anywhere with Daily Lesson Review
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Your spaced repetition schedule lives in the cloud, so you can keep your study streak going no
+              matter the screen size.
+            </p>
+          </div>
+
+          <div className="space-y-4 text-left">
+            <div className="flex items-start gap-4 rounded-lg bg-background/60 p-4 backdrop-blur">
+              <span className="rounded-md bg-primary/10 p-2">
+                <BookOpen className="h-5 w-5 text-primary" />
+              </span>
+              <div>
+                <h3 className="font-medium text-foreground">Structured reviews</h3>
+                <p className="text-sm text-muted-foreground">
+                  Follow the 0, 1, 3, 7 day cadence without keeping manual notes.
+                </p>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+
+            <div className="flex items-start gap-4 rounded-lg bg-background/60 p-4 backdrop-blur">
+              <span className="rounded-md bg-primary/10 p-2">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+              </span>
+              <div>
+                <h3 className="font-medium text-foreground">Progress you can trust</h3>
+                <p className="text-sm text-muted-foreground">
+                  See completed and upcoming lessons at a glance, optimized for any device.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
