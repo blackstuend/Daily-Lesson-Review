@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { ExternalLink, Trash2, Pencil, Search, ChevronLeft, ChevronRight, X } from "lucide-react"
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useState, useEffect, useCallback } from "react"
 import { EditLessonDialog } from "@/components/edit-lesson-dialog"
 import {
@@ -48,7 +48,6 @@ export default function LessonsPage() {
   const [totalLessons, setTotalLessons] = useState(0)
   const [lessonStats, setLessonStats] = useState({ words: 0, sentences: 0, links: 0 })
   const router = useRouter()
-  const pathname = usePathname()
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData)
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
@@ -72,44 +71,47 @@ export default function LessonsPage() {
       const to = from + ITEMS_PER_PAGE - 1
 
       try {
-        // Build query
-        let query = supabase
-          .from("lessons")
-          .select("*", { count: "exact" })
-          .order("lesson_date", { ascending: false })
-          .order("created_at", { ascending: false })
+        // Fetch paginated lessons and all lesson types in parallel
+        const [paginatedResult, allLessonsResult] = await Promise.all([
+          // Paginated query with search
+          (async () => {
+            let query = supabase
+              .from("lessons")
+              .select("*", { count: "exact" })
+              .order("lesson_date", { ascending: false })
+              .order("created_at", { ascending: false })
 
-        // Apply search filter if present
-        if (search.trim()) {
-          query = query.or(
-            `title.ilike.%${search}%,content.ilike.%${search}%,lesson_type.ilike.%${search}%`
-          )
-        }
+            if (search.trim()) {
+              query = query.or(
+                `title.ilike.%${search}%,content.ilike.%${search}%,lesson_type.ilike.%${search}%`
+              )
+            }
 
-        // Apply pagination
-        query = query.range(from, to)
+            query = query.range(from, to)
+            return query
+          })(),
+          // Get all lesson types for stats (only if no search to avoid extra query)
+          search.trim()
+            ? supabase.from("lessons").select("lesson_type")
+            : supabase.from("lessons").select("lesson_type"),
+        ])
 
-        const { data, error, count } = await query
+        const { data, error, count } = paginatedResult
 
         if (!error && data) {
           setLessons(data)
           setTotalCount(count || 0)
         }
 
-        // Fetch total stats (not filtered by search)
-        const [{ count: total }, { data: statsData }] = await Promise.all([
-          supabase.from("lessons").select("*", { count: "exact", head: true }),
-          supabase.from("lessons").select("lesson_type"),
-        ])
-
-        setTotalLessons(total || 0)
-
-        if (statsData) {
+        // Calculate stats from all lessons
+        const { data: allLessons } = allLessonsResult
+        if (allLessons) {
           const stats = {
-            words: statsData.filter((l) => l.lesson_type === "word").length,
-            sentences: statsData.filter((l) => l.lesson_type === "sentence").length,
-            links: statsData.filter((l) => l.lesson_type === "link").length,
+            words: allLessons.filter((l) => l.lesson_type === "word").length,
+            sentences: allLessons.filter((l) => l.lesson_type === "sentence").length,
+            links: allLessons.filter((l) => l.lesson_type === "link").length,
           }
+          setTotalLessons(allLessons.length)
           setLessonStats(stats)
         }
       } catch (error) {
@@ -123,7 +125,7 @@ export default function LessonsPage() {
 
   useEffect(() => {
     fetchLessons(currentPage, debouncedSearch)
-  }, [pathname, currentPage, debouncedSearch, fetchLessons])
+  }, [currentPage, debouncedSearch, fetchLessons])
 
   const handleDeleteClick = (lesson: Lesson) => {
     setLessonToDelete(lesson)
@@ -263,29 +265,34 @@ export default function LessonsPage() {
             {lessons.map((lesson: Lesson) => (
             <Card key={lesson.id}>
               <CardContent className="flex items-center gap-4 p-4">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="mb-1 flex items-center gap-2">
                     <h3 className="font-medium">{lesson.title}</h3>
                     <Badge variant="secondary">{getLessonTypeLabel(lesson.lesson_type)}</Badge>
                   </div>
                   {lesson.content && <p className="text-sm text-muted-foreground line-clamp-2">{lesson.content}</p>}
                   {lesson.lesson_type === "link" && lesson.link_url && (
-                    <a
-                      href={lesson.link_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-1 flex items-center gap-1 text-xs text-blue-500 hover:underline"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      {lesson.link_url}
-                    </a>
+                    <div className="mt-2 flex items-center gap-2">
+                      <a
+                        href={lesson.link_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1.5 text-xs text-blue-600 transition hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-400 dark:hover:bg-blue-900"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="font-medium">Open Link</span>
+                      </a>
+                      <span className="truncate text-xs text-muted-foreground" title={lesson.link_url}>
+                        {lesson.link_url}
+                      </span>
+                    </div>
                   )}
                   <p className="mt-1 text-xs text-muted-foreground">
                     Lesson day {new Date(lesson.lesson_date).toLocaleDateString()}
                   </p>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-shrink-0 gap-2">
                   <Button variant="outline" size="sm" onClick={() => handleEditClick(lesson)}>
                     <Pencil className="h-4 w-4" />
                   </Button>

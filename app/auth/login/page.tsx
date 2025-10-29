@@ -5,7 +5,10 @@ import type React from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
+import { getSessionErrorMessage } from "@/lib/auth-error-handler"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 function GoogleIcon() {
   return (
@@ -33,6 +36,16 @@ function GoogleIcon() {
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const searchParams = useSearchParams()
+  const [sessionWarning, setSessionWarning] = useState<string | null>(null)
+
+  useEffect(() => {
+    const errorType = searchParams.get("error")
+    if (errorType) {
+      const message = getSessionErrorMessage(errorType)
+      setSessionWarning(message)
+    }
+  }, [searchParams])
 
   const handleGoogleLogin = async () => {
     const supabase = createClient()
@@ -63,6 +76,12 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-4">
+              {sessionWarning && (
+                <Alert variant="destructive">
+                  <AlertDescription>{sessionWarning}</AlertDescription>
+                </Alert>
+              )}
+
               <Button
                 type="button"
                 variant="outline"
@@ -73,7 +92,7 @@ export default function LoginPage() {
                 <GoogleIcon />
                 {isGoogleLoading ? "Connecting..." : "Continue with Google"}
               </Button>
-              
+
               {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
           </CardContent>
