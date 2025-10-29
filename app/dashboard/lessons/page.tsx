@@ -277,10 +277,10 @@ export default function LessonsPage() {
                         href={lesson.link_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1.5 text-xs text-blue-600 transition hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-400 dark:hover:bg-blue-900"
+                        className="inline-flex items-center gap-1.5 rounded-md bg-blue-50 px-2 py-1.5 text-xs text-blue-600 transition hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-400 dark:hover:bg-blue-900"
+                        aria-label="Open link"
                       >
-                        <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="font-medium">Open Link</span>
+                        <ExternalLink className="h-3.5 w-3.5 shrink-0" />
                       </a>
                       <span className="truncate text-xs text-muted-foreground" title={lesson.link_url}>
                         {lesson.link_url}

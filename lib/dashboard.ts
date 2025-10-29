@@ -119,14 +119,36 @@ export const getReviewsData = cache(async (): Promise<ReviewsData> => {
 export const getCalendarData = cache(async (month: number, year: number): Promise<ReviewWithLesson[]> => {
   try {
     const supabase = await getSupabaseServerClient()
+
+    // Get the first and last day of the current month
     const firstDay = new Date(year, month, 1)
     const lastDay = new Date(year, month + 1, 0)
+
+    // Calculate how many days from previous month to show
+    const startingDayOfWeek = firstDay.getDay()
+    const prevMonth = month === 0 ? 11 : month - 1
+    const prevYear = month === 0 ? year - 1 : year
+    const prevMonthLastDay = new Date(year, month, 0).getDate()
+    const prevMonthStartDay = prevMonthLastDay - startingDayOfWeek + 1
+
+    // Calculate how many days from next month to show
+    const endingDayOfWeek = lastDay.getDay()
+    const nextMonthDays = 6 - endingDayOfWeek
+    const nextMonth = month === 11 ? 0 : month + 1
+    const nextYear = month === 11 ? year + 1 : year
+
+    // Build date strings in YYYY-MM-DD format to avoid timezone issues
+    const startDate = `${prevYear}-${String(prevMonth + 1).padStart(2, "0")}-${String(prevMonthStartDay).padStart(2, "0")}`
+    // If nextMonthDays is 0, use last day of current month; otherwise use nextMonthDays as the day of next month
+    const endDate = nextMonthDays === 0
+      ? `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay.getDate()).padStart(2, "0")}`
+      : `${nextYear}-${String(nextMonth + 1).padStart(2, "0")}-${String(nextMonthDays).padStart(2, "0")}`
 
     const { data, error } = await supabase
       .from("review_schedule")
       .select("*, lessons(*)")
-      .gte("review_date", firstDay.toISOString().split("T")[0])
-      .lte("review_date", lastDay.toISOString().split("T")[0])
+      .gte("review_date", startDate)
+      .lte("review_date", endDate)
 
     if (error) {
       handleSessionError(error)
