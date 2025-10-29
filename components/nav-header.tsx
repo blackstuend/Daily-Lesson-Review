@@ -6,6 +6,7 @@ import { BookOpen, LogOut } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useDashboardStore } from "@/stores/dashboard-store"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export function NavHeader() {
   const router = useRouter()
@@ -46,6 +47,7 @@ export function NavHeader() {
           <Link href="/dashboard/settings" className="text-sm font-medium hover:underline">
             Settings
           </Link>
+          <ThemeToggle />
           <Button variant="ghost" size="sm" onClick={handleLogout}>
             <LogOut className="h-4 w-4" />
           </Button>
