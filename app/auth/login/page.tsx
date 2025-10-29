@@ -2,13 +2,13 @@
 
 import type React from "react"
 
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 import { getSessionErrorMessage } from "@/lib/auth-error-handler"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Suspense, useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 
 function GoogleIcon() {
   return (
@@ -33,7 +33,7 @@ function GoogleIcon() {
   )
 }
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [error, setError] = useState<string | null>(null)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const searchParams = useSearchParams()
@@ -99,5 +99,13 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
   )
 }
