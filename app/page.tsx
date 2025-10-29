@@ -4,9 +4,19 @@ import { getCurrentUser } from "@/lib/supabase/server"
 import { BookOpen, Calendar, CheckCircle2, Menu } from "lucide-react"
 import Link from "next/link"
 import { Sheet, SheetClose, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { siteConfig } from "@/lib/site-config"
 
 export default async function HomePage() {
   const user = await getCurrentUser()
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: siteConfig.name,
+    description: siteConfig.description,
+    url: siteConfig.url,
+    applicationCategory: "EducationalApplication",
+    operatingSystem: "All",
+  }
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -89,6 +99,10 @@ export default async function HomePage() {
       </header>
 
       <main className="flex-1 flex flex-col">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <section className="container mx-auto px-4 py-20 text-center">
           <h1 className="mb-4 text-4xl font-bold tracking-tight md:text-5xl">
             Master Your Learning with Spaced Repetition
