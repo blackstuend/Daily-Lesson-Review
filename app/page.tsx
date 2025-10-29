@@ -15,7 +15,7 @@ export default async function HomePage() {
           <div className="flex items-center gap-2">
             <BookOpen className="h-6 w-6" />
             <Link href="/">
-              <span className="text-lg font-semibold">Daily Lesson Review</span>
+              <span className="text-lg font-semibold">Daily Study Review</span>
             </Link>
           </div>
           <div className="hidden items-center gap-2 md:flex">
@@ -52,7 +52,7 @@ export default async function HomePage() {
                 <div className="border-b p-4">
                   <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
                     <BookOpen className="h-5 w-5" />
-                    Daily Lesson Review
+                    Daily Study Review
                   </Link>
                 </div>
                 <div className="flex flex-col gap-2 p-4">
@@ -94,8 +94,8 @@ export default async function HomePage() {
             Master Your Learning with Spaced Repetition
           </h1>
           <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground">
-            Review lessons at optimal intervals (0, 1, 3, 7 days) to maximize retention and never forget what
-            you&apos;ve learned.
+            Review study material at optimal intervals (0, 1, 3, 7 days) to maximize retention and never forget
+            what you&apos;ve learned.
           </p>
           <Button size="lg" asChild>
             <Link href="/auth/sign-up">Get Started</Link>
@@ -109,8 +109,8 @@ export default async function HomePage() {
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                   <BookOpen className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="mb-2 text-xl font-semibold">Add Lessons</h3>
-                <p className="text-muted-foreground">Save links, difficult words, or sentences you want to remember</p>
+                <h3 className="mb-2 text-xl font-semibold">Add Study Items</h3>
+                <p className="text-muted-foreground">Save links, vocabulary, or notes you want to remember</p>
               </div>
               <div className="flex flex-col items-center text-center">
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">

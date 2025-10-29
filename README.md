@@ -1,11 +1,11 @@
-# Daily Lesson Review
+# Daily Study Review
 
-A spaced repetition learning application that helps you master and retain what you learn using scientifically proven review intervals.
+A spaced repetition learning application that helps you master and retain what you study using scientifically proven review intervals.
 
 ## Features
 
 - **Spaced Repetition System**: Review lessons at optimal intervals (0, 1, 3, and 7 days) to maximize retention
-- **Multiple Lesson Types**: Save links, difficult words, or sentences you want to remember
+- **Flexible Study Items**: Save links, difficult words, or sentences you want to remember
 - **Daily Reviews**: Get reminded to review at the right time
 - **Progress Tracking**: Visualize your learning journey with calendar view
 - **User Authentication**: Secure authentication powered by Supabase
@@ -36,7 +36,7 @@ A spaced repetition learning application that helps you master and retain what y
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd daily-lesson-review
+cd daily-study-review
 ```
 
 2. Install dependencies:
@@ -109,11 +109,11 @@ Tracks the spaced repetition schedule for each lesson:
 
 ## How It Works
 
-1. **Add Lessons**: Create new lessons by adding links, words, or sentences you want to remember
+1. **Add Study Items**: Create new lessons by adding links, words, or sentences you want to remember
 2. **Automatic Scheduling**: The system automatically creates a review schedule with intervals at 0, 1, 3, and 7 days
-3. **Daily Reviews**: Check your dashboard to see which lessons are due for review today
+3. **Daily Reviews**: Check your dashboard to see which study items are due for review today
 4. **Mark as Complete**: Mark reviews as complete after studying them
-5. **Track Progress**: View your learning progress on the calendar
+5. **Track Progress**: View your study progress on the calendar
 
 ## Available Scripts
 

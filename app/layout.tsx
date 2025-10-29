@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Daily Lesson Review',
-  description: 'Track and review your daily lessons with spaced repetition',
+  title: 'Daily Study Review',
+  description: 'Track and review your daily study sessions with spaced repetition',
 }
 
 export default function RootLayout({

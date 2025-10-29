@@ -111,7 +111,7 @@ function LoginPageContent() {
               Build your review habit
             </span>
             <h2 className="text-3xl font-semibold text-foreground">
-              Learn anywhere with Daily Lesson Review
+              Learn anywhere with Daily Study Review
             </h2>
             <p className="mt-4 text-muted-foreground">
               Your spaced repetition schedule lives in the cloud, so you can keep your study streak going no

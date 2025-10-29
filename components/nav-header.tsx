@@ -58,7 +58,7 @@ export function NavHeader() {
           <div className="border-b p-4">
             <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold">
               <BookOpen className="h-5 w-5" />
-              Daily Lesson Review
+              Daily Study Review
             </Link>
           </div>
           <nav className="flex flex-1 flex-col gap-2 p-4">
@@ -88,7 +88,7 @@ export function NavHeader() {
         <div className="flex items-center gap-2">
           <BookOpen className="h-6 w-6" />
           <Link href="/dashboard">
-            <span className="text-lg font-semibold">Daily Lesson Review</span>
+            <span className="text-lg font-semibold">Daily Study Review</span>
           </Link>
         </div>
         {DesktopNav}
