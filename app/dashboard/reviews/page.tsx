@@ -8,7 +8,6 @@ export default async function ReviewsPage() {
 
   const todayReviews = reviewsData.today
   const upcomingReviews = reviewsData.upcoming
-  const pastReviews = reviewsData.past
 
   const todayPending = todayReviews.filter((review) => !review.completed).length
 
@@ -30,7 +29,6 @@ export default async function ReviewsPage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
         </TabsList>
 
         <TabsContent value="today" className="space-y-4">
@@ -60,22 +58,6 @@ export default async function ReviewsPage() {
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
                 <p>No upcoming reviews in the next 7 days</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="completed" className="space-y-4">
-          {pastReviews.length > 0 ? (
-            <div className="space-y-3">
-              {pastReviews.map((review) => (
-                <ReviewCard key={review.id} review={review} showDate />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                <p>No completed reviews yet</p>
               </CardContent>
             </Card>
           )}
