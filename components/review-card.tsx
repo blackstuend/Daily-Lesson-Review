@@ -2,11 +2,12 @@
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ExternalLink, Trash2, Undo2, Calendar as CalendarIcon, ChevronRight } from "lucide-react"
+import { ExternalLink, Trash2, Undo2, Calendar as CalendarIcon, ChevronRight, Pencil } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { EditLessonDialog } from "@/components/edit-lesson-dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +45,7 @@ export function ReviewCard({
   const [optimisticCompleted, setOptimisticCompleted] = useState(review.completed)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+  const [showEditDialog, setShowEditDialog] = useState(false)
   const router = useRouter()
 
   // Sync optimistic state when review data updates from server
@@ -230,6 +232,15 @@ export function ReviewCard({
             </>
           )}
           <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowEditDialog(true)}
+            disabled={isLoading}
+            title="Edit lesson"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
             variant="destructive"
             size="sm"
             onClick={() => setShowDeleteDialog(true)}
@@ -261,6 +272,18 @@ export function ReviewCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {showEditDialog && (
+        <EditLessonDialog
+          lesson={review.lessons}
+          onClose={(saved) => {
+            setShowEditDialog(false)
+            if (saved) {
+              router.refresh()
+            }
+          }}
+        />
+      )}
     </>
   )
 }
