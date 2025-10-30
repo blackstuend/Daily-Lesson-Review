@@ -4,11 +4,16 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ReviewCard } from "@/components/review-card"
+import { ContributionsGraph } from "@/components/contributions-graph"
 import { getDashboardData } from "@/lib/dashboard"
+import { getContributionsData } from "@/lib/contributions"
 import { BookOpen, Calendar, Plus } from "lucide-react"
 
 export default async function DashboardPage() {
-  const dashboardData = await getDashboardData()
+  const [dashboardData, contributionsData] = await Promise.all([
+    getDashboardData(),
+    getContributionsData(),
+  ])
 
   const totalLessons = dashboardData.totalLessons
   const todayReviews = dashboardData.todayReviews
@@ -57,6 +62,10 @@ export default async function DashboardPage() {
             </Button>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="mb-8">
+        <ContributionsGraph data={contributionsData} />
       </div>
 
       <Card>
