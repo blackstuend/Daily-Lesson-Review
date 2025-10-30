@@ -40,7 +40,7 @@ export function ContributionsGraph({ data }: ContributionsGraphProps) {
           </div>
 
           {/* Graph */}
-          <div className="w-full overflow-x-auto">
+          <div className="w-full overflow-x-auto flex justify-center">
             <ActivityCalendar
               data={data.contributions}
               theme={{
