@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { format, getDay, startOfWeek, addWeeks, parseISO } from "date-fns"
+import { format, startOfWeek, parseISO } from "date-fns"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Tooltip,
@@ -18,31 +18,42 @@ interface ContributionsGraphProps {
 export function ContributionsGraph({ data }: ContributionsGraphProps) {
   const [hoveredDay, setHoveredDay] = useState<string | null>(null)
 
-  // Group contributions by weeks
-  const weeks: Array<Array<typeof data.contributions[0]>> = []
-  let currentWeek: Array<typeof data.contributions[0]> = []
+  // Create a map for quick lookup
+  const contributionMap = new Map(data.contributions.map((c) => [c.date, c]))
 
-  // Start from the first contribution and organize by weeks
-  const startDate = data.contributions[0] ? parseISO(data.contributions[0].date) : new Date()
-  let weekStart = startOfWeek(startDate, { weekStartsOn: 0 }) // Sunday
+  // Group contributions by weeks starting from the first date
+  const weeks: Array<Array<typeof data.contributions[0] | null>> = []
 
-  data.contributions.forEach((contrib) => {
-    const contribDate = parseISO(contrib.date)
-    const contribWeekStart = startOfWeek(contribDate, { weekStartsOn: 0 })
+  if (data.contributions.length === 0) {
+    return null
+  }
 
-    // If we've moved to a new week, push current week and start new one
-    if (contribWeekStart.getTime() !== weekStart.getTime()) {
-      weeks.push([...currentWeek])
-      currentWeek = []
-      weekStart = contribWeekStart
+  const startDate = parseISO(data.contributions[0].date)
+  const endDate = parseISO(data.contributions[data.contributions.length - 1].date)
+
+  // Start from the Sunday of the week containing the first contribution
+  let currentWeekStart = startOfWeek(startDate, { weekStartsOn: 0 })
+  const lastWeekStart = startOfWeek(endDate, { weekStartsOn: 0 })
+
+  // Build weeks array
+  while (currentWeekStart <= lastWeekStart) {
+    const week: Array<typeof data.contributions[0] | null> = []
+
+    // For each day of the week (Sunday = 0 to Saturday = 6)
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      const currentDate = new Date(currentWeekStart)
+      currentDate.setDate(currentDate.getDate() + dayOffset)
+      const dateStr = format(currentDate, "yyyy-MM-dd")
+
+      const contribution = contributionMap.get(dateStr)
+      week.push(contribution || null)
     }
 
-    currentWeek.push(contrib)
-  })
+    weeks.push(week)
 
-  // Push the last week
-  if (currentWeek.length > 0) {
-    weeks.push(currentWeek)
+    // Move to next week
+    currentWeekStart = new Date(currentWeekStart)
+    currentWeekStart.setDate(currentWeekStart.getDate() + 7)
   }
 
   const getLevelColor = (level: number): string => {
@@ -56,15 +67,20 @@ export function ContributionsGraph({ data }: ContributionsGraphProps) {
     return colors[level as keyof typeof colors] || colors[0]
   }
 
+  // Generate month labels - use the first Sunday of each week to determine month
   const monthLabels: Array<{ label: string; weekIndex: number }> = []
   let lastMonth = ""
 
   weeks.forEach((week, weekIndex) => {
-    if (week.length > 0) {
-      const firstDayOfWeek = week[0]
+    // Use the first day (Sunday) of the week to determine the month
+    const firstDayOfWeek = week[0]
+    if (firstDayOfWeek) {
       const month = format(parseISO(firstDayOfWeek.date), "MMM")
 
-      if (month !== lastMonth) {
+      if (month !== lastMonth && weekIndex > 0) {
+        monthLabels.push({ label: month, weekIndex })
+        lastMonth = month
+      } else if (weekIndex === 0) {
         monthLabels.push({ label: month, weekIndex })
         lastMonth = month
       }
@@ -133,15 +149,13 @@ export function ContributionsGraph({ data }: ContributionsGraphProps) {
                   <div className="flex gap-[3px]">
                     {weeks.map((week, weekIndex) => (
                       <div key={weekIndex} className="flex flex-col gap-[3px]">
-                        {[0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => {
-                          const contrib = week.find((c) => getDay(parseISO(c.date)) === dayOfWeek)
-
+                        {week.map((contrib, dayIndex) => {
                           if (!contrib) {
-                            return <div key={dayOfWeek} className="h-[11px] w-[11px]"></div>
+                            return <div key={dayIndex} className="h-[11px] w-[11px]"></div>
                           }
 
                           return (
-                            <Tooltip key={dayOfWeek}>
+                            <Tooltip key={dayIndex}>
                               <TooltipTrigger asChild>
                                 <div
                                   className={`h-[11px] w-[11px] rounded-sm transition-all hover:ring-2 hover:ring-primary hover:ring-offset-1 ${getLevelColor(contrib.level)}`}

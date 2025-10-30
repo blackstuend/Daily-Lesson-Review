@@ -64,11 +64,7 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <div className="mb-8">
-        <ContributionsGraph data={contributionsData} />
-      </div>
-
-      <Card>
+      <Card className="mb-8">
         <CardHeader>
           <CardTitle>Today&apos;s Review Lessons</CardTitle>
           <CardDescription>See what still needs attention and what you&apos;ve already finished today</CardDescription>
@@ -107,6 +103,8 @@ export default async function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ContributionsGraph data={contributionsData} />
     </div>
   )
 }
