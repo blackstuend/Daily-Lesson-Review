@@ -85,7 +85,7 @@ export function EditLessonDialog({ lesson, onClose }: EditLessonDialogProps) {
     try {
       const selectedDate = new Date(lessonDate)
       selectedDate.setHours(0, 0, 0, 0)
-      const lessonDateIso = selectedDate.toISOString()
+      const lessonDateString = format(selectedDate, "yyyy-MM-dd")
 
       const { error: updateError } = await supabase
         .from("lessons")
@@ -95,7 +95,7 @@ export function EditLessonDialog({ lesson, onClose }: EditLessonDialogProps) {
           lesson_type: lessonType,
           link_url: lessonType === "link" ? linkUrl : null,
           linked_lesson_id: lessonType === "link" ? null : linkedLessonId,
-          lesson_date: lessonDateIso,
+          lesson_date: lessonDateString,
           updated_at: new Date().toISOString(),
         })
         .eq("id", lesson.id)

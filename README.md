@@ -66,6 +66,7 @@ Run the SQL scripts in the `scripts/` directory in your Supabase SQL editor:
 - `004_fix_review_schedule_trigger.sql` - Ensures review schedules stay in sync
 - `005_add_linked_lessons_relation.sql` - Allows lessons to reference a related lesson
 - `006_create_waiting_lessons_table.sql` - Adds the waiting list table plus the promotion helper function
+- `007_sync_review_schedule_on_lesson_date_update.sql` - Keeps the review schedule aligned whenever a lesson's date changes
 
 5. Run the development server:
 ```bash
