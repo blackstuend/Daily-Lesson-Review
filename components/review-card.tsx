@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { EditLessonDialog } from "@/components/edit-lesson-dialog"
+import { TTSButton } from "@/components/ui/tts-button"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -158,11 +159,13 @@ export function ReviewCard({
               </>
             )}
           </div>
-          <p
-            className={`text-sm text-muted-foreground line-clamp-1 ${optimisticCompleted && showTodoStyle ? "line-through" : ""}`}
-          >
-            {review.lessons.content}
-          </p>
+          <div className="flex items-start gap-2">
+            <p
+              className={`flex-1 text-sm text-muted-foreground line-clamp-1 ${optimisticCompleted && showTodoStyle ? "line-through" : ""}`}
+            >
+              {review.lessons.content}
+            </p>
+          </div>
           {showDate && (
             <p className="mt-1 text-xs text-muted-foreground">
               {optimisticCompleted ? "Completed" : "Scheduled"}: {new Date(review.review_date).toLocaleDateString()}
@@ -171,6 +174,9 @@ export function ReviewCard({
         </div>
 
         <div className="ml-4 flex flex-wrap gap-2">
+        {(review.lessons.lesson_type === "word" || review.lessons.lesson_type === "sentence") && (
+              <TTSButton text={review.lessons.title} />
+            )}
           {review.lessons.lesson_type === "link" && review.lessons.link_url && (
             <Button variant="ghost" size="sm" asChild disabled={isLoading}>
               <a href={review.lessons.link_url} target="_blank" rel="noopener noreferrer">

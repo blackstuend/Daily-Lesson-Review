@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { ExternalLink, CheckCircle2, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { use, useEffect, useState } from "react"
+import { TTSButton } from "@/components/ui/tts-button"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -103,7 +104,12 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             </Badge>
             <Badge variant="secondary">{review.lessons.lesson_type}</Badge>
           </div>
-          <CardTitle className="text-2xl">{review.lessons.title}</CardTitle>
+          <div className="flex items-center gap-3">
+            <CardTitle className="text-2xl flex-1">{review.lessons.title}</CardTitle>
+            {(review.lessons.lesson_type === "word" || review.lessons.lesson_type === "sentence") && (
+              <TTSButton text={review.lessons.title} size="icon" variant="outline" />
+            )}
+          </div>
           <CardDescription>Review this lesson to reinforce your learning</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -123,13 +129,18 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
           )}
 
           <div className="rounded-lg border bg-muted/50 p-4">
-            <p className="mb-2 text-sm font-medium">
-              {review.lessons.lesson_type === "link"
-                ? "Notes:"
-                : review.lessons.lesson_type === "word"
-                  ? "Definition:"
-                  : "Sentence:"}
-            </p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-medium">
+                {review.lessons.lesson_type === "link"
+                  ? "Notes:"
+                  : review.lessons.lesson_type === "word"
+                    ? "Definition:"
+                    : "Sentence:"}
+              </p>
+              {review.lessons.content && (review.lessons.lesson_type === "word" || review.lessons.lesson_type === "sentence") && (
+                <TTSButton text={review.lessons.content} variant="outline" showLabel />
+              )}
+            </div>
             <p className="whitespace-pre-wrap leading-relaxed">{review.lessons.content}</p>
           </div>
 
