@@ -115,7 +115,9 @@ export function useTTS(options?: UseTTSOptions) {
       }
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, [audioManager, options]);
 
   const stop = useCallback(() => {

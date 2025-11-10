@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ExternalLink, CheckCircle2, Trash2 } from "lucide-react"
+import { ExternalLink, CheckCircle2, Trash2, Link2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { use, useEffect, useState } from "react"
 import { TTSButton } from "@/components/ui/tts-button"
@@ -19,6 +19,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
+const REVIEW_SELECT = "*, lessons(*, linked_lesson:linked_lesson_id(id, title, lesson_type, link_url))"
+
 export default function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [review, setReview] = useState<any>(null)
@@ -31,7 +33,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   useEffect(() => {
     async function loadReview() {
       const supabase = createClient()
-      const { data } = await supabase.from("review_schedule").select("*, lessons(*)").eq("id", id).single()
+      const { data } = await supabase.from("review_schedule").select(REVIEW_SELECT).eq("id", id).single()
 
       setReview(data)
       setIsLoading(false)
@@ -87,6 +89,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     )
   }
 
+  const linkedLesson = review.lessons?.linked_lesson
+
   const intervalColors: Record<number, string> = {
     0: "bg-blue-500/10 text-blue-500",
     1: "bg-green-500/10 text-green-500",
@@ -125,6 +129,27 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 {review.lessons.link_url}
                 <ExternalLink className="h-4 w-4" />
               </a>
+            </div>
+          )}
+
+          {linkedLesson && (
+            <div className="rounded-lg border border-dashed bg-muted/70 p-4">
+              <div className="mb-1 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Link2 className="h-4 w-4" />
+                Linked Resource
+              </div>
+              <p className="text-sm font-medium">{linkedLesson.title}</p>
+              {linkedLesson.link_url && (
+                <a
+                  href={linkedLesson.link_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                >
+                  Visit resource
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              )}
             </div>
           )}
 

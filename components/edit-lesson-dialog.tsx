@@ -29,6 +29,13 @@ type Lesson = {
   lesson_type: "link" | "word" | "sentence"
   link_url: string | null
   lesson_date: string
+  linked_lesson_id: string | null
+}
+
+type LinkLessonOption = {
+  id: string
+  title: string
+  link_url: string | null
 }
 
 interface EditLessonDialogProps {
@@ -41,6 +48,9 @@ export function EditLessonDialog({ lesson, onClose }: EditLessonDialogProps) {
   const [content, setContent] = useState(lesson.content || "")
   const [lessonType, setLessonType] = useState<"link" | "word" | "sentence">(lesson.lesson_type)
   const [linkUrl, setLinkUrl] = useState(lesson.link_url || "")
+  const [linkedLessonId, setLinkedLessonId] = useState<string | null>(lesson.linked_lesson_id)
+  const [linkableLessons, setLinkableLessons] = useState<LinkLessonOption[]>([])
+  const [isLinkLessonsLoading, setIsLinkLessonsLoading] = useState(true)
   const [lessonDate, setLessonDate] = useState<Date>(() => {
     const initial = lesson.lesson_date ? new Date(lesson.lesson_date) : new Date()
     initial.setHours(0, 0, 0, 0)
@@ -57,11 +67,62 @@ export function EditLessonDialog({ lesson, onClose }: EditLessonDialogProps) {
     setContent(lesson.content || "")
     setLessonType(lesson.lesson_type)
     setLinkUrl(lesson.link_url || "")
+    setLinkedLessonId(lesson.linked_lesson_id)
     const nextDate = lesson.lesson_date ? new Date(lesson.lesson_date) : new Date()
     nextDate.setHours(0, 0, 0, 0)
     setLessonDate(nextDate)
     setIsDatePickerOpen(false)
   }, [lesson])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadLinkLessons() {
+      setIsLinkLessonsLoading(true)
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from("lessons")
+          .select("id, title, link_url")
+          .eq("lesson_type", "link")
+          .order("lesson_date", { ascending: false })
+
+        if (error) throw error
+        if (isMounted) {
+          setLinkableLessons(data ?? [])
+        }
+      } catch (err) {
+        console.error("Failed to load link lessons", err)
+        if (isMounted) {
+          setLinkableLessons([])
+        }
+      } finally {
+        if (isMounted) {
+          setIsLinkLessonsLoading(false)
+        }
+      }
+    }
+
+    void loadLinkLessons()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (linkedLessonId && !linkableLessons.some((lesson) => lesson.id === linkedLessonId)) {
+      setLinkedLessonId(null)
+    }
+  }, [linkableLessons, linkedLessonId])
+
+  const handleLessonTypeChange = (value: string) => {
+    const nextType = value as Lesson["lesson_type"]
+    setLessonType(nextType)
+    if (nextType === "link") {
+      setLinkedLessonId(null)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -82,6 +143,7 @@ export function EditLessonDialog({ lesson, onClose }: EditLessonDialogProps) {
           content: content || null,
           lesson_type: lessonType,
           link_url: lessonType === "link" ? linkUrl : null,
+          linked_lesson_id: lessonType === "link" ? null : linkedLessonId,
           lesson_date: lessonDateIso,
           updated_at: new Date().toISOString(),
         })
@@ -109,7 +171,7 @@ export function EditLessonDialog({ lesson, onClose }: EditLessonDialogProps) {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="edit-lesson-type">Lesson Type</Label>
-              <Select value={lessonType} onValueChange={(value: any) => setLessonType(value)}>
+              <Select value={lessonType} onValueChange={handleLessonTypeChange}>
                 <SelectTrigger id="edit-lesson-type">
                   <SelectValue />
                 </SelectTrigger>
@@ -180,6 +242,34 @@ export function EditLessonDialog({ lesson, onClose }: EditLessonDialogProps) {
                 </PopoverContent>
               </Popover>
             </div>
+
+            {lessonType !== "link" && (
+              <div className="space-y-2">
+                <Label htmlFor="edit-linked-lesson">Related Link (optional)</Label>
+                <Select
+                  value={linkedLessonId ?? "none"}
+                  onValueChange={(value) => setLinkedLessonId(value === "none" ? null : value)}
+                  disabled={isLinkLessonsLoading}
+                >
+                  <SelectTrigger id="edit-linked-lesson">
+                    <SelectValue placeholder={isLinkLessonsLoading ? "Loading links..." : "Choose a link"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No linked source</SelectItem>
+                    {linkableLessons.map((linkLesson) => (
+                      <SelectItem key={linkLesson.id} value={linkLesson.id}>
+                        {linkLesson.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  {linkableLessons.length === 0
+                    ? "Create a Link lesson first to attach reference material."
+                    : "Link this entry back to the article or resource it came from."}
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="edit-content">

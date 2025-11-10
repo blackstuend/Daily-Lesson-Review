@@ -12,17 +12,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useDashboardStore } from "@/stores/dashboard-store"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 
+type LessonType = "link" | "word" | "sentence"
+
+type LinkLessonOption = {
+  id: string
+  title: string
+  link_url: string | null
+}
+
 export default function AddLessonPage() {
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
-  const [lessonType, setLessonType] = useState<"link" | "word" | "sentence">("word")
+  const [lessonType, setLessonType] = useState<LessonType>("word")
   const [linkUrl, setLinkUrl] = useState("")
+  const [linkedLessonId, setLinkedLessonId] = useState<string | null>(null)
+  const [linkableLessons, setLinkableLessons] = useState<LinkLessonOption[]>([])
+  const [isLinkLessonsLoading, setIsLinkLessonsLoading] = useState(true)
   const [lessonDate, setLessonDate] = useState<Date>(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -33,6 +44,55 @@ export default function AddLessonPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData)
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadLinkLessons() {
+      setIsLinkLessonsLoading(true)
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from("lessons")
+          .select("id, title, link_url")
+          .eq("lesson_type", "link")
+          .order("lesson_date", { ascending: false })
+
+        if (error) throw error
+        if (isMounted) {
+          setLinkableLessons(data ?? [])
+        }
+      } catch (err) {
+        console.error("Failed to load link lessons", err)
+        if (isMounted) {
+          setLinkableLessons([])
+        }
+      } finally {
+        if (isMounted) {
+          setIsLinkLessonsLoading(false)
+        }
+      }
+    }
+
+    void loadLinkLessons()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (linkedLessonId && !linkableLessons.some((lesson) => lesson.id === linkedLessonId)) {
+      setLinkedLessonId(null)
+    }
+  }, [linkableLessons, linkedLessonId])
+
+  const handleLessonTypeChange = (value: LessonType) => {
+    setLessonType(value)
+    if (value === "link") {
+      setLinkedLessonId(null)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,6 +116,7 @@ export default function AddLessonPage() {
         content: content || null,
         lesson_type: lessonType,
         link_url: lessonType === "link" ? linkUrl : null,
+        linked_lesson_id: lessonType === "link" ? null : linkedLessonId,
         lesson_date: lessonDateString,
       })
 
@@ -85,7 +146,7 @@ export default function AddLessonPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="lesson-type">Lesson Type</Label>
-              <Select value={lessonType} onValueChange={(value: any) => setLessonType(value)}>
+              <Select value={lessonType} onValueChange={(value) => handleLessonTypeChange(value as LessonType)}>
                 <SelectTrigger id="lesson-type">
                   <SelectValue />
                 </SelectTrigger>
@@ -107,6 +168,34 @@ export default function AddLessonPage() {
                 onChange={(e) => setTitle(e.target.value)}
               />
             </div>
+
+            {lessonType !== "link" && (
+              <div className="space-y-2">
+                <Label htmlFor="linked-lesson">Related Link (optional)</Label>
+                <Select
+                  value={linkedLessonId ?? "none"}
+                  onValueChange={(value) => setLinkedLessonId(value === "none" ? null : value)}
+                  disabled={isLinkLessonsLoading}
+                >
+                  <SelectTrigger id="linked-lesson">
+                    <SelectValue placeholder={isLinkLessonsLoading ? "Loading links..." : "Choose a link"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No linked source</SelectItem>
+                    {linkableLessons.map((lesson) => (
+                      <SelectItem key={lesson.id} value={lesson.id}>
+                        {lesson.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  {linkableLessons.length === 0
+                    ? "Create a Link lesson first to attach reference material."
+                    : "Link this entry back to the article or resource it came from."}
+                </p>
+              </div>
+            )}
 
             {lessonType === "link" && (
               <div className="space-y-2">

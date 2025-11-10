@@ -75,9 +75,12 @@ export const getContributionsData = cache(async (): Promise<ContributionsData> =
       .gte("completed_at", startDate.toISOString())
       .order("completed_at", { ascending: true })
 
-    if (error) {
-      handleSessionError(error)
-      throw new Error(`Failed to fetch contributions data: ${error.message}`)
+    if (error == null) {
+      // ok
+    } else {
+      const supabaseError = error
+      handleSessionError(supabaseError)
+      throw new Error(`Failed to fetch contributions data: ${supabaseError.message}`)
     }
 
     // Create a map of date -> count

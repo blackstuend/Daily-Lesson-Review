@@ -27,6 +27,8 @@ type ReviewsData = {
   past: ReviewWithLesson[]
 }
 
+const REVIEW_SELECT = "*, lessons(*, linked_lesson:linked_lesson_id(id, title, lesson_type, link_url))"
+
 type CalendarKey = `${number}-${number}`
 
 type DashboardStore = {
@@ -109,7 +111,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
         [
           supabase
             .from("review_schedule")
-            .select("*, lessons(*)")
+            .select(REVIEW_SELECT)
             .eq("review_date", today)
             .order("completed", { ascending: true })
             .order("created_at", { ascending: false }),
@@ -160,19 +162,19 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       const [todayResult, upcomingResult, pastResult] = await Promise.all([
         supabase
           .from("review_schedule")
-          .select("*, lessons(*)")
+          .select(REVIEW_SELECT)
           .eq("review_date", today)
           .order("completed", { ascending: true })
           .order("review_interval", { ascending: true }),
         supabase
           .from("review_schedule")
-          .select("*, lessons(*)")
+          .select(REVIEW_SELECT)
           .gt("review_date", today)
           .lte("review_date", nextWeekString)
           .order("review_date", { ascending: true }),
         supabase
           .from("review_schedule")
-          .select("*, lessons(*)")
+          .select(REVIEW_SELECT)
           .lt("review_date", today)
           .eq("completed", true)
           .order("completed_at", { ascending: false })
@@ -217,7 +219,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
 
       const { data, error } = await supabase
         .from("review_schedule")
-        .select("*, lessons(*)")
+        .select(REVIEW_SELECT)
         .gte("review_date", firstDay.toISOString().split("T")[0])
         .lte("review_date", lastDay.toISOString().split("T")[0])
 

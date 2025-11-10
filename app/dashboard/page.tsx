@@ -6,6 +6,7 @@ import { ReviewLessonsSection } from "@/components/review-lessons-section"
 import { ContributionsGraph } from "@/components/contributions-graph"
 import { getDashboardData } from "@/lib/dashboard"
 import { getContributionsData } from "@/lib/contributions"
+import { groupReviewsByLinkedResource } from "@/lib/review-grouping"
 import { BookOpen, Calendar, Plus } from "lucide-react"
 
 export default async function DashboardPage() {
@@ -16,6 +17,8 @@ export default async function DashboardPage() {
 
   const totalLessons = dashboardData.totalLessons
   const todayReviews = dashboardData.todayReviews
+  const groupedToday = groupReviewsByLinkedResource(todayReviews)
+  const visibleTodayReviews = groupedToday.displayReviews
   const pendingCount = todayReviews.filter((review) => !review.completed).length
 
   return (
@@ -61,7 +64,7 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <ReviewLessonsSection reviews={todayReviews} />
+      <ReviewLessonsSection reviews={visibleTodayReviews} linkedChildrenMap={groupedToday.childrenByParentId} />
 
       <ContributionsGraph data={contributionsData} />
     </div>

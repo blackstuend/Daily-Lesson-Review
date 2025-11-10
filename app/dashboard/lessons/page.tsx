@@ -33,6 +33,7 @@ type Lesson = {
   lesson_date: string
   created_at: string
   updated_at: string
+  linked_lesson_id: string | null
 }
 
 export default function LessonsPage() {

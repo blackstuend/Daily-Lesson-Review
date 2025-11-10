@@ -2,6 +2,8 @@ import { cache } from "react"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { handleSessionError } from "@/lib/auth-error-handler"
 
+const REVIEW_SELECT = "*, lessons(*, linked_lesson:linked_lesson_id(id, title, lesson_type, link_url))"
+
 type ReviewWithLesson = {
   id: string
   review_date: string
@@ -29,20 +31,26 @@ export const getDashboardData = cache(async (): Promise<DashboardData> => {
     const [{ data: todayReviews, error: todayError }, { count: totalLessons, error: lessonsError }] = await Promise.all([
       supabase
         .from("review_schedule")
-        .select("*, lessons(*)")
+        .select(REVIEW_SELECT)
         .eq("review_date", today)
         .order("completed", { ascending: true })
         .order("created_at", { ascending: false }),
       supabase.from("lessons").select("*", { count: "exact", head: true }),
     ])
 
-    if (todayError) {
-      handleSessionError(todayError)
-      throw new Error(`Failed to fetch today's reviews: ${todayError.message}`)
+    if (todayError == null) {
+      // ok
+    } else {
+      const supabaseError = todayError
+      handleSessionError(supabaseError)
+      throw new Error(`Failed to fetch today's reviews: ${supabaseError.message}`)
     }
-    if (lessonsError) {
-      handleSessionError(lessonsError)
-      throw new Error(`Failed to fetch total lessons: ${lessonsError.message}`)
+    if (lessonsError == null) {
+      // ok
+    } else {
+      const supabaseError = lessonsError
+      handleSessionError(supabaseError)
+      throw new Error(`Failed to fetch total lessons: ${supabaseError.message}`)
     }
 
     return {
@@ -73,36 +81,45 @@ export const getReviewsData = cache(async (): Promise<ReviewsData> => {
     const [todayResult, upcomingResult, pastResult] = await Promise.all([
       supabase
         .from("review_schedule")
-        .select("*, lessons(*)")
+        .select(REVIEW_SELECT)
         .eq("review_date", today)
         .order("completed", { ascending: true })
         .order("review_interval", { ascending: true }),
       supabase
         .from("review_schedule")
-        .select("*, lessons(*)")
+        .select(REVIEW_SELECT)
         .gt("review_date", today)
         .lte("review_date", nextWeekString)
         .order("review_date", { ascending: true }),
       supabase
         .from("review_schedule")
-        .select("*, lessons(*)")
+        .select(REVIEW_SELECT)
         .lt("review_date", today)
         .eq("completed", true)
         .order("completed_at", { ascending: false })
         .limit(20),
     ])
 
-    if (todayResult.error) {
-      handleSessionError(todayResult.error)
-      throw new Error(`Failed to fetch today's reviews: ${todayResult.error.message}`)
+    if (todayResult.error == null) {
+      // ok
+    } else {
+      const supabaseError = todayResult.error
+      handleSessionError(supabaseError)
+      throw new Error(`Failed to fetch today's reviews: ${supabaseError.message}`)
     }
-    if (upcomingResult.error) {
-      handleSessionError(upcomingResult.error)
-      throw new Error(`Failed to fetch upcoming reviews: ${upcomingResult.error.message}`)
+    if (upcomingResult.error == null) {
+      // ok
+    } else {
+      const supabaseError = upcomingResult.error
+      handleSessionError(supabaseError)
+      throw new Error(`Failed to fetch upcoming reviews: ${supabaseError.message}`)
     }
-    if (pastResult.error) {
-      handleSessionError(pastResult.error)
-      throw new Error(`Failed to fetch past reviews: ${pastResult.error.message}`)
+    if (pastResult.error == null) {
+      // ok
+    } else {
+      const supabaseError = pastResult.error
+      handleSessionError(supabaseError)
+      throw new Error(`Failed to fetch past reviews: ${supabaseError.message}`)
     }
 
     return {
@@ -146,13 +163,16 @@ export const getCalendarData = cache(async (month: number, year: number): Promis
 
     const { data, error } = await supabase
       .from("review_schedule")
-      .select("*, lessons(*)")
+      .select(REVIEW_SELECT)
       .gte("review_date", startDate)
       .lte("review_date", endDate)
 
-    if (error) {
-      handleSessionError(error)
-      throw new Error(`Failed to fetch calendar data: ${error.message}`)
+    if (error == null) {
+      // ok
+    } else {
+      const supabaseError = error
+      handleSessionError(supabaseError)
+      throw new Error(`Failed to fetch calendar data: ${supabaseError.message}`)
     }
 
     return data ?? []
