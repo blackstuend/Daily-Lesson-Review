@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ExternalLink, Trash2, Pencil, Search, ChevronLeft, ChevronRight, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useEffect, useCallback } from "react"
@@ -38,6 +39,7 @@ export default function LessonsPage() {
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
+  const [selectedType, setSelectedType] = useState<string>("all")
   const [isLoading, setIsLoading] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -63,7 +65,7 @@ export default function LessonsPage() {
   }, [searchQuery])
 
   const fetchLessons = useCallback(
-    async (page: number, search: string) => {
+    async (page: number, search: string, type: string) => {
       setIsLoading(true)
 
       const supabase = createClient()
@@ -73,7 +75,7 @@ export default function LessonsPage() {
       try {
         // Fetch paginated lessons and all lesson types in parallel
         const [paginatedResult, allLessonsResult] = await Promise.all([
-          // Paginated query with search
+          // Paginated query with search and type filter
           (async () => {
             let query = supabase
               .from("lessons")
@@ -85,6 +87,10 @@ export default function LessonsPage() {
               query = query.or(
                 `title.ilike.%${search}%,content.ilike.%${search}%,lesson_type.ilike.%${search}%`
               )
+            }
+
+            if (type !== "all") {
+              query = query.eq("lesson_type", type)
             }
 
             query = query.range(from, to)
@@ -124,8 +130,8 @@ export default function LessonsPage() {
   )
 
   useEffect(() => {
-    fetchLessons(currentPage, debouncedSearch)
-  }, [currentPage, debouncedSearch, fetchLessons])
+    fetchLessons(currentPage, debouncedSearch, selectedType)
+  }, [currentPage, debouncedSearch, selectedType, fetchLessons])
 
   const handleDeleteClick = (lesson: Lesson) => {
     setLessonToDelete(lesson)
@@ -143,7 +149,7 @@ export default function LessonsPage() {
 
     if (!error) {
       // Refresh the current page
-      await fetchLessons(currentPage, debouncedSearch)
+      await fetchLessons(currentPage, debouncedSearch, selectedType)
       await fetchDashboardData(true)
     }
 
@@ -160,7 +166,7 @@ export default function LessonsPage() {
     setEditingLesson(null)
     // Only refresh if changes were saved
     if (saved) {
-      void fetchLessons(currentPage, debouncedSearch)
+      void fetchLessons(currentPage, debouncedSearch, selectedType)
       void fetchDashboardData(true)
     }
   }
@@ -193,8 +199,8 @@ export default function LessonsPage() {
         <Button onClick={() => router.push("/dashboard/add")}>Add New Lesson</Button>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-6">
+      {/* Search Bar and Type Filter */}
+      <div className="mb-6 space-y-4">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -213,6 +219,21 @@ export default function LessonsPage() {
               <X className="h-4 w-4" />
             </button>
           )}
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-2 block">Filter by type</label>
+          <Select value={selectedType} onValueChange={setSelectedType}>
+            <SelectTrigger className="w-full sm:w-[280px]">
+              <SelectValue placeholder="Select lesson type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types ({lessonStats.words + lessonStats.sentences + lessonStats.links})</SelectItem>
+              <SelectItem value="word">Vocabulary ({lessonStats.words})</SelectItem>
+              <SelectItem value="sentence">Sentence ({lessonStats.sentences})</SelectItem>
+              <SelectItem value="link">Link ({lessonStats.links})</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -249,7 +270,9 @@ export default function LessonsPage() {
         <div className="py-8 text-center text-muted-foreground">Loading lessons...</div>
       ) : lessons.length === 0 ? (
         <div className="py-8 text-center text-muted-foreground">
-          {searchQuery ? "No lessons found matching your search." : "No lessons yet. Add your first lesson!"}
+          {searchQuery || selectedType !== "all"
+            ? `No ${selectedType !== "all" ? selectedType : ""} lessons found${searchQuery ? " matching your search" : ""}.`
+            : "No lessons yet. Add your first lesson!"}
         </div>
       ) : (
         <>
@@ -257,7 +280,7 @@ export default function LessonsPage() {
             <span>
               Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
               {Math.min(currentPage * ITEMS_PER_PAGE, totalCount)} of {totalCount} lessons
-              {searchQuery && " (filtered)"}
+              {(searchQuery || selectedType !== "all") && " (filtered)"}
             </span>
           </div>
 

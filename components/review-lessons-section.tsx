@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ReviewCard } from "@/components/review-card"
 
 interface ReviewLessonsSectionProps {
@@ -11,11 +12,16 @@ interface ReviewLessonsSectionProps {
 
 export function ReviewLessonsSection({ reviews }: ReviewLessonsSectionProps) {
   const [selectedDay, setSelectedDay] = useState<number | "all">("all")
+  const [selectedType, setSelectedType] = useState<string>("all")
 
-  // Filter reviews based on selected day
-  const filteredReviews = selectedDay === "all"
+  // Filter reviews based on selected day and type
+  let filteredReviews = selectedDay === "all"
     ? reviews
     : reviews.filter((review) => review.review_interval === selectedDay)
+
+  filteredReviews = selectedType === "all"
+    ? filteredReviews
+    : filteredReviews.filter((review) => review.lessons?.lesson_type === selectedType)
 
   // Count reviews for each interval
   const dayCounts = {
@@ -25,6 +31,13 @@ export function ReviewLessonsSection({ reviews }: ReviewLessonsSectionProps) {
     7: reviews.filter((r) => r.review_interval === 7).length,
   }
 
+  // Count reviews for each lesson type
+  const typeCounts = {
+    word: reviews.filter((r) => r.lessons?.lesson_type === "word").length,
+    sentence: reviews.filter((r) => r.lessons?.lesson_type === "sentence").length,
+    link: reviews.filter((r) => r.lessons?.lesson_type === "link").length,
+  }
+
   return (
     <Card className="mb-8">
       <CardHeader>
@@ -32,6 +45,21 @@ export function ReviewLessonsSection({ reviews }: ReviewLessonsSectionProps) {
         <CardDescription>Review and track your lessons for today</CardDescription>
       </CardHeader>
       <CardContent>
+        <div className="mb-4">
+          <label className="text-sm font-medium mb-2 block">Filter by type</label>
+          <Select value={selectedType} onValueChange={setSelectedType}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select lesson type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types ({reviews.length})</SelectItem>
+              <SelectItem value="word">Vocabulary ({typeCounts.word})</SelectItem>
+              <SelectItem value="sentence">Sentence ({typeCounts.sentence})</SelectItem>
+              <SelectItem value="link">Link ({typeCounts.link})</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <Tabs value={String(selectedDay)} onValueChange={(value) => setSelectedDay(value === "all" ? "all" : Number(value))} className="mb-4">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="all">All ({reviews.length})</TabsTrigger>
@@ -50,7 +78,9 @@ export function ReviewLessonsSection({ reviews }: ReviewLessonsSectionProps) {
           </div>
         ) : (
           <div className="py-8 text-center text-muted-foreground">
-            <p>No lessons for {selectedDay === "all" ? "today" : `Day ${selectedDay}`}.</p>
+            <p>
+              No {selectedType !== "all" ? `${selectedType} ` : ""}lessons for {selectedDay === "all" ? "today" : `Day ${selectedDay}`}.
+            </p>
           </div>
         )}
       </CardContent>
