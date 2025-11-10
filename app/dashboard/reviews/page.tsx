@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ReviewCard } from "@/components/review-card"
 import { getReviewsData } from "@/lib/dashboard"
+import { groupReviewsByLinkedResource } from "@/lib/review-grouping"
 
 export default async function ReviewsPage() {
   const reviewsData = await getReviewsData()
@@ -9,7 +10,10 @@ export default async function ReviewsPage() {
   const todayReviews = reviewsData.today
   const upcomingReviews = reviewsData.upcoming
 
-  const todayPending = todayReviews.filter((review) => !review.completed).length
+  const groupedToday = groupReviewsByLinkedResource(todayReviews)
+  const groupedUpcoming = groupReviewsByLinkedResource(upcomingReviews)
+
+  const todayPending = groupedToday.displayReviews.filter((review) => !review.completed).length
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -32,10 +36,15 @@ export default async function ReviewsPage() {
         </TabsList>
 
         <TabsContent value="today" className="space-y-4">
-          {todayReviews.length > 0 ? (
+          {groupedToday.displayReviews.length > 0 ? (
             <div className="space-y-3">
-              {todayReviews.map((review) => (
-                <ReviewCard key={review.id} review={review} showTodoStyle />
+              {groupedToday.displayReviews.map((review) => (
+                <ReviewCard
+                  key={review.id}
+                  review={review}
+                  showTodoStyle
+                  linkedChildren={groupedToday.childrenByParentId[review.id]}
+                />
               ))}
             </div>
           ) : (
@@ -48,10 +57,15 @@ export default async function ReviewsPage() {
         </TabsContent>
 
         <TabsContent value="upcoming" className="space-y-4">
-          {upcomingReviews.length > 0 ? (
+          {groupedUpcoming.displayReviews.length > 0 ? (
             <div className="space-y-3">
-              {upcomingReviews.map((review) => (
-                <ReviewCard key={review.id} review={review} showDate />
+              {groupedUpcoming.displayReviews.map((review) => (
+                <ReviewCard
+                  key={review.id}
+                  review={review}
+                  showDate
+                  linkedChildren={groupedUpcoming.childrenByParentId[review.id]}
+                />
               ))}
             </div>
           ) : (

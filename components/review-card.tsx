@@ -2,12 +2,13 @@
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ExternalLink, Trash2, Undo2, Calendar as CalendarIcon, ChevronRight, Pencil } from "lucide-react"
+import { ExternalLink, Trash2, Undo2, Calendar as CalendarIcon, ChevronRight, Pencil, Link2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { EditLessonDialog } from "@/components/edit-lesson-dialog"
+import { TTSButton } from "@/components/ui/tts-button"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
+import { cn } from "@/lib/utils"
 
 interface ReviewCardProps {
   review: any
@@ -32,6 +34,8 @@ interface ReviewCardProps {
   showTodoStyle?: boolean
   allowRevert?: boolean
   hideBadgesWhenCompleted?: boolean
+  linkedChildren?: any[]
+  isNested?: boolean
 }
 
 export function ReviewCard({
@@ -40,6 +44,8 @@ export function ReviewCard({
   showTodoStyle = false,
   allowRevert = false,
   hideBadgesWhenCompleted = false,
+  linkedChildren = [],
+  isNested = false,
 }: ReviewCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -62,6 +68,12 @@ export function ReviewCard({
     1: "bg-green-500/10 text-green-500",
     3: "bg-yellow-500/10 text-yellow-500",
     7: "bg-purple-500/10 text-purple-500",
+  }
+
+  const lessonTypeStyles: Record<string, string> = {
+    word: "border-sky-500/30 bg-sky-500/10 text-sky-600",
+    sentence: "border-amber-500/30 bg-amber-500/10 text-amber-600",
+    link: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600",
   }
 
   const handleDelete = async () => {
@@ -131,9 +143,18 @@ export function ReviewCard({
     await handleMoveToDate(tomorrow)
   }
 
+  const containerClasses = cn(
+    "relative flex flex-wrap items-start gap-3 rounded-lg border p-4",
+    optimisticCompleted && showTodoStyle ? "bg-muted/50" : "",
+    isNested ? "border-dashed bg-muted/60 w-full" : ""
+  )
+
+  const linkedLesson = !isNested ? review.lessons?.linked_lesson : null
+  const hasLinkedChildren = !isNested && linkedChildren.length > 0
+
   return (
     <>
-      <div className={`relative flex items-start gap-3 rounded-lg border p-4 ${optimisticCompleted && showTodoStyle ? "bg-muted/50" : ""}`}>
+      <div className={containerClasses}>
         {isLoading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/80 backdrop-blur-sm">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -154,26 +175,63 @@ export function ReviewCard({
                 <Badge variant="outline" className={intervalColors[review.review_interval]}>
                   Day {review.review_interval}
                 </Badge>
-                <Badge variant="secondary">{review.lessons.lesson_type}</Badge>
+                <Badge
+                  variant="secondary"
+                  className={cn("capitalize", lessonTypeStyles[review.lessons.lesson_type] ?? "")}
+                >
+                  {review.lessons.lesson_type}
+                </Badge>
               </>
             )}
           </div>
-          <p
-            className={`text-sm text-muted-foreground line-clamp-1 ${optimisticCompleted && showTodoStyle ? "line-through" : ""}`}
-          >
-            {review.lessons.content}
-          </p>
+          <div className="flex items-start gap-2">
+            <p
+              className={`flex-1 text-sm text-muted-foreground line-clamp-1 ${optimisticCompleted && showTodoStyle ? "line-through" : ""}`}
+            >
+              {review.lessons.content}
+            </p>
+          </div>
           {showDate && (
             <p className="mt-1 text-xs text-muted-foreground">
               {optimisticCompleted ? "Completed" : "Scheduled"}: {new Date(review.review_date).toLocaleDateString()}
             </p>
           )}
+          {linkedLesson && (
+            <div className="mt-3 rounded-md border border-dashed bg-muted/60 p-3">
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <Link2 className="h-3 w-3" />
+                Linked Resource
+              </div>
+              <p className="mt-1 text-sm font-medium text-foreground">{linkedLesson.title}</p>
+              {linkedLesson.link_url && (
+                <a
+                  href={linkedLesson.link_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                >
+                  Visit link
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="ml-4 flex flex-wrap gap-2">
+        {(review.lessons.lesson_type === "word" || review.lessons.lesson_type === "sentence") && (
+              <TTSButton text={review.lessons.title} />
+            )}
           {review.lessons.lesson_type === "link" && review.lessons.link_url && (
             <Button variant="ghost" size="sm" asChild disabled={isLoading}>
               <a href={review.lessons.link_url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
+          )}
+          {!isNested && linkedLesson?.link_url && review.lessons.lesson_type !== "link" && (
+            <Button variant="ghost" size="sm" asChild disabled={isLoading} title="Open linked resource">
+              <a href={linkedLesson.link_url} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-4 w-4" />
               </a>
             </Button>
@@ -256,6 +314,24 @@ export function ReviewCard({
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
+
+        {hasLinkedChildren && (
+          <div className="mt-4 w-full space-y-2 border-t pt-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Linked items due</div>
+            <div className="space-y-2">
+              {linkedChildren.map((child) => (
+                <ReviewCard
+                  key={child.id}
+                  review={child}
+                  showTodoStyle={showTodoStyle}
+                  allowRevert={allowRevert}
+                  hideBadgesWhenCompleted={hideBadgesWhenCompleted}
+                  isNested
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { AlertCircle, Trash2 } from "lucide-react"
+import { AlertCircle, Trash2, Volume2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import {
@@ -18,12 +18,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useTTSStore, type Accent } from "@/stores/tts-store"
+import { Switch } from "@/components/ui/switch"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null)
   const [stats, setStats] = useState({ lessons: 0, reviews: 0, completed: 0 })
   const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
+  const { accent, isEnabled, setAccent, setIsEnabled } = useTTSStore()
 
   useEffect(() => {
     async function loadData() {
@@ -164,6 +174,52 @@ export default function SettingsPage() {
               These intervals are scientifically proven to maximize long-term retention by reviewing information just
               before you&apos;re about to forget it.
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Volume2 className="h-5 w-5" />
+              Text-to-Speech Settings
+            </CardTitle>
+            <CardDescription>Configure audio pronunciation preferences</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="tts-enabled">Enable Text-to-Speech</Label>
+                <p className="text-sm text-muted-foreground">
+                  Allow audio playback for lessons and words
+                </p>
+              </div>
+              <Switch
+                id="tts-enabled"
+                checked={isEnabled}
+                onCheckedChange={setIsEnabled}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="accent-select">Voice Accent</Label>
+              <Select
+                value={accent}
+                onValueChange={(value) => setAccent(value as Accent)}
+                disabled={!isEnabled}
+              >
+                <SelectTrigger id="accent-select" className="w-full">
+                  <SelectValue placeholder="Select accent" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="american">American</SelectItem>
+                  <SelectItem value="british">British</SelectItem>
+                  <SelectItem value="australian">Australian</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                Choose the voice accent for text-to-speech playback
+              </p>
+            </div>
           </CardContent>
         </Card>
 
