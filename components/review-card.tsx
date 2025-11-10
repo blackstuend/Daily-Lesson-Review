@@ -31,6 +31,7 @@ interface ReviewCardProps {
   showDate?: boolean
   showTodoStyle?: boolean
   allowRevert?: boolean
+  hideBadgesWhenCompleted?: boolean
 }
 
 export function ReviewCard({
@@ -38,6 +39,7 @@ export function ReviewCard({
   showDate = false,
   showTodoStyle = false,
   allowRevert = false,
+  hideBadgesWhenCompleted = false,
 }: ReviewCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -147,10 +149,14 @@ export function ReviewCard({
             >
               {review.lessons.title}
             </h3>
-            <Badge variant="outline" className={intervalColors[review.review_interval]}>
-              Day {review.review_interval}
-            </Badge>
-            <Badge variant="secondary">{review.lessons.lesson_type}</Badge>
+            {!(hideBadgesWhenCompleted && optimisticCompleted) && (
+              <>
+                <Badge variant="outline" className={intervalColors[review.review_interval]}>
+                  Day {review.review_interval}
+                </Badge>
+                <Badge variant="secondary">{review.lessons.lesson_type}</Badge>
+              </>
+            )}
           </div>
           <p
             className={`text-sm text-muted-foreground line-clamp-1 ${optimisticCompleted && showTodoStyle ? "line-through" : ""}`}
