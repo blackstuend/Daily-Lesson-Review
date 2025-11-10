@@ -51,9 +51,6 @@ export function TTSButton({
       ) : (
         <Volume2 className="h-4 w-4" />
       )}
-      {showLabel && (
-        <span className="ml-2">{isThisTextPlaying ? "Stop" : "Listen"}</span>
-      )}
     </Button>
   );
 }

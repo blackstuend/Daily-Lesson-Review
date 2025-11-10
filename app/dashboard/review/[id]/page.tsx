@@ -162,9 +162,6 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                     ? "Definition:"
                     : "Sentence:"}
               </p>
-              {review.lessons.content && (review.lessons.lesson_type === "word" || review.lessons.lesson_type === "sentence") && (
-                <TTSButton text={review.lessons.content} variant="outline" showLabel />
-              )}
             </div>
             <p className="whitespace-pre-wrap leading-relaxed">{review.lessons.content}</p>
           </div>
