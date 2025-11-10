@@ -3,12 +3,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import ActivityCalendar from "react-activity-calendar"
 import type { ContributionsData } from "@/lib/contributions"
+import { useDomTheme } from "@/hooks/use-dom-theme"
 
 interface ContributionsGraphProps {
   data: ContributionsData
 }
 
 export function ContributionsGraph({ data }: ContributionsGraphProps) {
+
+  const theme = useDomTheme()
   if (data.contributions.length === 0) {
     return null
   }
@@ -42,13 +45,20 @@ export function ContributionsGraph({ data }: ContributionsGraphProps) {
           {/* Graph */}
           <div className="w-full overflow-x-auto flex justify-center">
             <ActivityCalendar
+              colorScheme={theme ?? undefined}
               data={data.contributions}
-              theme={{
-                light: ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"],
-                dark: ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"],
-              }}
               labels={{
                 totalCount: "{{count}} reviews in the last year",
+              }}
+              theme={{
+                "light": [
+                  "hsl(0, 0%, 92%)",
+                  "rebeccapurple"
+                ],
+                "dark": [
+                  "hsl(0, 0%, 22%)",
+                  "hsl(225,92%,77%)"
+                ]
               }}
               showWeekdayLabels
               blockSize={11}

@@ -181,3 +181,29 @@ export const getCalendarData = cache(async (month: number, year: number): Promis
     throw error
   }
 })
+
+export const getCalendarDayData = cache(async (date: string): Promise<ReviewWithLesson[]> => {
+  try {
+    const supabase = await getSupabaseServerClient()
+
+    const { data, error } = await supabase
+      .from("review_schedule")
+      .select(REVIEW_SELECT)
+      .eq("review_date", date)
+      .order("completed", { ascending: true })
+      .order("created_at", { ascending: false })
+
+    if (error == null) {
+      // ok
+    } else {
+      const supabaseError = error
+      handleSessionError(supabaseError)
+      throw new Error(`Failed to fetch reviews for ${date}: ${supabaseError.message}`)
+    }
+
+    return data ?? []
+  } catch (error) {
+    handleSessionError(error)
+    throw error
+  }
+})

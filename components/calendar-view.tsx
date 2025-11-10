@@ -1,14 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ChevronLeft, ChevronRight, GripVertical } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { groupReviewsByLinkedResource } from "@/lib/review-grouping"
+import { toast } from "@/hooks/use-toast"
 
 type ReviewWithLesson = {
   id: string
@@ -19,6 +20,8 @@ type ReviewWithLesson = {
   lessons: any
   [key: string]: any
 }
+
+type CompletionState = Pick<ReviewWithLesson, "completed" | "completed_at">
 
 const monthNames = [
   "January",
@@ -42,12 +45,81 @@ type CalendarViewProps = {
 }
 
 export function CalendarView({ reviews, currentMonth, currentYear }: CalendarViewProps) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [draggedReview, setDraggedReview] = useState<ReviewWithLesson | null>(null)
   const [dragOverDate, setDragOverDate] = useState<string | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [completionOverrides, setCompletionOverrides] = useState<Record<string, CompletionState>>({})
+  const [pendingToggleIds, setPendingToggleIds] = useState<Record<string, boolean>>({})
   const router = useRouter()
   const now = new Date()
+
+  const baseCompletionState = useMemo(() => {
+    const map: Record<string, CompletionState> = {}
+    reviews.forEach((review) => {
+      map[review.id] = {
+        completed: review.completed,
+        completed_at: review.completed_at,
+      }
+    })
+    return map
+  }, [reviews])
+
+  const resolvedReviews = useMemo(() => {
+    return reviews.map((review) => {
+      const override = completionOverrides[review.id]
+      if (!override) return review
+      return {
+        ...review,
+        ...override,
+      }
+    })
+  }, [reviews, completionOverrides])
+
+  useEffect(() => {
+    setCompletionOverrides((prev) => {
+      let changed = false
+      const next = { ...prev }
+      Object.entries(prev).forEach(([id, state]) => {
+        const base = baseCompletionState[id]
+        if (base && base.completed === state.completed && base.completed_at === state.completed_at) {
+          delete next[id]
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+  }, [baseCompletionState])
+
+  const applyOverride = (reviewId: string, state: CompletionState | null) => {
+    setCompletionOverrides((prev) => {
+      const next = { ...prev }
+      if (state === null) {
+        delete next[reviewId]
+        return next
+      }
+      const base = baseCompletionState[reviewId]
+      if (base && base.completed === state.completed && base.completed_at === state.completed_at) {
+        delete next[reviewId]
+      } else {
+        next[reviewId] = state
+      }
+      return next
+    })
+  }
+
+  const setPendingToggle = (reviewId: string, pending: boolean) => {
+    setPendingToggleIds((prev) => {
+      const next = { ...prev }
+      if (pending) {
+        next[reviewId] = true
+      } else {
+        delete next[reviewId]
+      }
+      return next
+    })
+  }
+
+  const isReviewPending = (reviewId: string) => Boolean(pendingToggleIds[reviewId])
 
   const getReviewColor = (reviewInterval: number, completed: boolean) => {
     if (completed) {
@@ -58,11 +130,11 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
       case 0:
         return "border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800"
       case 1:
-        return "border-purple-200 bg-purple-50 dark:bg-purple-950/20 dark:border-purple-800"
+        return "border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800"
       case 3:
-        return "border-orange-200 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800"
+        return "border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800"
       case 7:
-        return "border-pink-200 bg-pink-50 dark:bg-pink-950/20 dark:border-pink-800"
+        return "border-purple-200 bg-purple-50 dark:bg-purple-950/20 dark:border-purple-800"
       default:
         return "border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800"
     }
@@ -84,25 +156,30 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
   const prevMonthDays = startingDayOfWeek
   const nextMonthDays = 6 - endingDayOfWeek
 
-  const reviewsByDate = reviews.reduce<Record<string, typeof reviews>>((acc, review) => {
-    const date = review.review_date
-    if (!acc[date]) {
-      acc[date] = []
-    }
-    acc[date].push(review)
-    return acc
-  }, {})
+  const { reviewsByDate, groupedByDate } = useMemo(() => {
+    const reviewMap = resolvedReviews.reduce<Record<string, ReviewWithLesson[]>>((acc, review) => {
+      const date = review.review_date
+      if (!acc[date]) {
+        acc[date] = []
+      }
+      acc[date].push(review)
+      return acc
+    }, {})
 
-  const completedCount = reviews.filter((review) => review.completed).length
-  const pendingCount = reviews.length - completedCount
-  const selectedReviews = selectedDate ? reviewsByDate[selectedDate] ?? [] : []
-  const selectedDateLabel = selectedDate
-    ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString(undefined, {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      })
-    : ""
+    const groupedMap: Record<string, ReturnType<typeof groupReviewsByLinkedResource>> = {}
+    Object.entries(reviewMap).forEach(([date, list]) => {
+      groupedMap[date] = groupReviewsByLinkedResource(list)
+    })
+
+    return { reviewsByDate: reviewMap, groupedByDate: groupedMap }
+  }, [resolvedReviews])
+
+  const completedCount = resolvedReviews.filter((review) => review.completed).length
+  const pendingCount = resolvedReviews.length - completedCount
+  const navigateToDate = (dateString: string) => {
+    if (draggedReview) return
+    router.push(`/dashboard/calendar/${dateString}`)
+  }
 
   const handleDragStart = (e: React.DragEvent, review: ReviewWithLesson) => {
     setDraggedReview(review)
@@ -160,33 +237,120 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
     }
   }
 
-  const handleToggleComplete = async (reviewId: string, completed: boolean) => {
-    setIsUpdating(true)
+  const handleToggleComplete = async (review: ReviewWithLesson) => {
+    const currentState: CompletionState = {
+      completed: review.completed,
+      completed_at: review.completed_at,
+    }
+    const nextState: CompletionState = {
+      completed: !review.completed,
+      completed_at: !review.completed ? new Date().toISOString() : null,
+    }
+
+    applyOverride(review.id, nextState)
+    setPendingToggle(review.id, true)
 
     try {
-      const response = await fetch(`/api/reviews/${reviewId}`, {
+      const response = await fetch(`/api/reviews/${review.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          completed: !completed,
-          completed_at: !completed ? new Date().toISOString() : null
-        }),
+        body: JSON.stringify(nextState),
       })
 
       if (!response.ok) {
         throw new Error("Failed to toggle completion status")
       }
-
-      // Refresh the page to show updated data
-      router.refresh()
     } catch (error) {
       console.error("Error toggling completion:", error)
-      alert("Failed to update completion status. Please try again.")
+      applyOverride(review.id, currentState)
+      toast({
+        title: "Couldn't update review",
+        description: "Please try again in a moment.",
+        variant: "destructive",
+      })
     } finally {
-      setIsUpdating(false)
+      setPendingToggle(review.id, false)
     }
+  }
+
+  const renderCompactReview = (
+    review: ReviewWithLesson,
+    childReviews: ReviewWithLesson[] = [],
+    isChild = false
+  ) => {
+    const lessonTitle = review.lessons?.title ?? "Untitled lesson"
+    const isDragging = draggedReview?.id === review.id
+
+    return (
+      <div
+        key={review.id}
+        draggable={!isUpdating}
+        onDragStart={(e) => handleDragStart(e, review)}
+        onDragEnd={handleDragEnd}
+        className={cn(
+          "group relative rounded-md border bg-card p-1.5 shadow-sm transition-all cursor-move shrink-0",
+          getReviewColor(review.review_interval, review.completed),
+          isDragging && "opacity-40 scale-95",
+          !isUpdating && "hover:shadow-md hover:scale-[1.02] active:scale-95",
+          isChild && "border-dashed bg-muted/70 pl-2 pr-2"
+        )}
+      >
+        <div className="flex items-start gap-1.5">
+          <Checkbox
+            checked={review.completed}
+            onCheckedChange={() => handleToggleComplete(review)}
+            className={cn("mt-0.5 shrink-0", isChild ? "size-4" : "size-5")}
+            disabled={isUpdating || isReviewPending(review.id)}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={review.completed ? "Mark review incomplete" : "Mark review complete"}
+          />
+          <GripVertical
+            className={cn(
+              "text-muted-foreground mt-0.5 shrink-0 opacity-50 transition-opacity group-hover:opacity-100",
+              isChild ? "h-3 w-3" : "h-4 w-4"
+            )}
+          />
+          <div className="flex-1 min-w-0">
+            <Link
+              href={`/dashboard/review/${review.id}`}
+              className={cn(
+                "font-medium leading-tight hover:underline block",
+                isChild ? "text-[10px]" : "text-[11px]"
+              )}
+              title={lessonTitle}
+              onClick={(e) => {
+                if (isDragging) e.preventDefault()
+              }}
+            >
+              {lessonTitle}
+            </Link>
+          </div>
+        </div>
+        {!isChild && childReviews.length > 0 && (
+          <div className="mt-1.5 space-y-1 border-l border-dashed border-border/60 pl-2">
+            {childReviews.map((child) => renderCompactReview(child, [], true))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const renderDayReviewList = (dateString: string, dayReviews: ReviewWithLesson[]) => {
+    if (dayReviews.length === 0) return null
+    const grouping = groupedByDate[dateString]
+    const displayReviews = grouping?.displayReviews ?? dayReviews
+    const childrenMap = grouping?.childrenByParentId ?? {}
+
+    return (
+      <div
+        className="p-2 space-y-1.5 max-h-[calc(150px-32px)] overflow-y-auto overflow-x-hidden scrollbar-thin"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {displayReviews.map((review) => renderCompactReview(review, childrenMap[review.id] ?? []))}
+      </div>
+    )
   }
 
   return (
@@ -246,14 +410,30 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
                 <div
                   key={`prev-${index}`}
                   className={cn(
-                    "min-h-[150px] rounded-lg border transition-all relative group/cell opacity-50",
-                    "border-border/50",
-                    dragOverDate === dateString ? "border-primary border-2 bg-primary/10 shadow-lg opacity-100" : "",
-                    "hover:border-primary/50 hover:opacity-75"
+                    "min-h-[150px] rounded-xl border-2 transition-all duration-200 relative group/cell opacity-50 overflow-hidden cursor-pointer",
+                    "border-border/30",
+                    dragOverDate === dateString
+                      ? "!border-primary bg-primary/10 shadow-lg ring-2 ring-primary/20 ring-offset-1 opacity-100"
+                      : "",
+                    "hover:border-primary/40 hover:opacity-75 hover:shadow-md hover:bg-muted/20"
                   )}
                   onDragOver={(e) => handleDragOver(e, dateString)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, dateString)}
+                  onClick={() => navigateToDate(dateString)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      navigateToDate(dateString)
+                    }
+                  }}
+                  aria-label={`View schedule for ${date.toLocaleDateString(undefined, {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}`}
                 >
                   <div className="sticky top-0 z-10 flex items-center justify-between px-2 py-1.5 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 border-b">
                     <div className="text-sm font-semibold text-muted-foreground">{day}</div>
@@ -264,51 +444,7 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
                     )}
                   </div>
 
-                  {dayReviews.length > 0 ? (
-                    <div className="p-2 space-y-1.5 max-h-[calc(150px-32px)] overflow-y-auto overflow-x-hidden scrollbar-thin">
-                      {dayReviews.map((review) => {
-                        const lessonTitle = review.lessons?.title ?? "Untitled lesson"
-                        const isDragging = draggedReview?.id === review.id
-                        return (
-                          <div
-                            key={review.id}
-                            draggable={!isUpdating}
-                            onDragStart={(e) => handleDragStart(e, review)}
-                            onDragEnd={handleDragEnd}
-                            className={cn(
-                              "group relative rounded-md border bg-card p-1.5 shadow-sm transition-all cursor-move shrink-0",
-                              getReviewColor(review.review_interval, review.completed),
-                              isDragging && "opacity-40 scale-95",
-                              !isUpdating && "hover:shadow-md hover:scale-[1.02] active:scale-95"
-                            )}
-                          >
-                            <div className="flex items-start gap-1">
-                              <Checkbox
-                                checked={review.completed}
-                                onCheckedChange={() => handleToggleComplete(review.id, review.completed)}
-                                className="mt-0.5 h-3 w-3 shrink-0"
-                                disabled={isUpdating}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                              <GripVertical className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0 opacity-50 group-hover:opacity-100" />
-                              <div className="flex-1 min-w-0">
-                                <Link
-                                  href={`/dashboard/review/${review.id}`}
-                                  className="text-[11px] font-medium leading-tight hover:underline line-clamp-2 block"
-                                  title={lessonTitle}
-                                  onClick={(e) => {
-                                    if (isDragging) e.preventDefault()
-                                  }}
-                                >
-                                  {lessonTitle}
-                                </Link>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : null}
+                  {renderDayReviewList(dateString, dayReviews)}
                 </div>
               )
             })}
@@ -328,14 +464,32 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
                 <div
                   key={day}
                   className={cn(
-                    "min-h-[150px] rounded-lg border transition-all relative group/cell",
-                    isToday ? "border-primary bg-primary/5" : "border-border",
-                    dragOverDate === dateString ? "border-primary border-2 bg-primary/10 shadow-lg" : "",
-                    "hover:border-primary/50"
+                    "min-h-[150px] rounded-xl border-2 transition-all duration-200 relative group/cell overflow-hidden cursor-pointer",
+                    isToday
+                      ? "border-primary/60 bg-primary/5 shadow-md ring-2 ring-primary/10 ring-offset-1"
+                      : "border-border/50",
+                    dragOverDate === dateString
+                      ? "!border-primary bg-primary/10 shadow-lg ring-2 ring-primary/20 ring-offset-1"
+                      : "",
+                    "hover:border-primary/60 hover:shadow-md hover:bg-muted/30 hover:scale-[1.01]"
                   )}
                   onDragOver={(e) => handleDragOver(e, dateString)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, dateString)}
+                  onClick={() => navigateToDate(dateString)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      navigateToDate(dateString)
+                    }
+                  }}
+                  aria-label={`View schedule for ${date.toLocaleDateString(undefined, {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}`}
                 >
                   <div className="sticky top-0 z-10 flex items-center justify-between px-2 py-1.5 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 border-b">
                     <div className="text-sm font-semibold">{day}</div>
@@ -346,51 +500,7 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
                     )}
                   </div>
 
-                  {dayReviews.length > 0 ? (
-                    <div className="p-2 space-y-1.5 max-h-[calc(150px-32px)] overflow-y-auto overflow-x-hidden scrollbar-thin">
-                      {dayReviews.map((review) => {
-                        const lessonTitle = review.lessons?.title ?? "Untitled lesson"
-                        const isDragging = draggedReview?.id === review.id
-                        return (
-                          <div
-                            key={review.id}
-                            draggable={!isUpdating}
-                            onDragStart={(e) => handleDragStart(e, review)}
-                            onDragEnd={handleDragEnd}
-                            className={cn(
-                              "group relative rounded-md border bg-card p-1.5 shadow-sm transition-all cursor-move shrink-0",
-                              getReviewColor(review.review_interval, review.completed),
-                              isDragging && "opacity-40 scale-95",
-                              !isUpdating && "hover:shadow-md hover:scale-[1.02] active:scale-95"
-                            )}
-                          >
-                            <div className="flex items-start gap-1">
-                              <Checkbox
-                                checked={review.completed}
-                                onCheckedChange={() => handleToggleComplete(review.id, review.completed)}
-                                className="mt-0.5 h-3 w-3 shrink-0"
-                                disabled={isUpdating}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                              <GripVertical className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0 opacity-50 group-hover:opacity-100" />
-                              <div className="flex-1 min-w-0">
-                                <Link
-                                  href={`/dashboard/review/${review.id}`}
-                                  className="text-[11px] font-medium leading-tight hover:underline line-clamp-2 block"
-                                  title={lessonTitle}
-                                  onClick={(e) => {
-                                    if (isDragging) e.preventDefault()
-                                  }}
-                                >
-                                  {lessonTitle}
-                                </Link>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : null}
+                  {renderDayReviewList(dateString, dayReviews)}
                 </div>
               )
             })}
@@ -406,14 +516,30 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
                 <div
                   key={`next-${index}`}
                   className={cn(
-                    "min-h-[150px] rounded-lg border transition-all relative group/cell opacity-50",
-                    "border-border/50",
-                    dragOverDate === dateString ? "border-primary border-2 bg-primary/10 shadow-lg opacity-100" : "",
-                    "hover:border-primary/50 hover:opacity-75"
+                    "min-h-[150px] rounded-xl border-2 transition-all duration-200 relative group/cell opacity-50 overflow-hidden cursor-pointer",
+                    "border-border/30",
+                    dragOverDate === dateString
+                      ? "!border-primary bg-primary/10 shadow-lg ring-2 ring-primary/20 ring-offset-1 opacity-100"
+                      : "",
+                    "hover:border-primary/40 hover:opacity-75 hover:shadow-md hover:bg-muted/20"
                   )}
                   onDragOver={(e) => handleDragOver(e, dateString)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, dateString)}
+                  onClick={() => navigateToDate(dateString)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      navigateToDate(dateString)
+                    }
+                  }}
+                  aria-label={`View schedule for ${date.toLocaleDateString(undefined, {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}`}
                 >
                   <div className="sticky top-0 z-10 flex items-center justify-between px-2 py-1.5 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 border-b">
                     <div className="text-sm font-semibold text-muted-foreground">{day}</div>
@@ -424,51 +550,7 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
                     )}
                   </div>
 
-                  {dayReviews.length > 0 ? (
-                    <div className="p-2 space-y-1.5 max-h-[calc(150px-32px)] overflow-y-auto overflow-x-hidden scrollbar-thin">
-                      {dayReviews.map((review) => {
-                        const lessonTitle = review.lessons?.title ?? "Untitled lesson"
-                        const isDragging = draggedReview?.id === review.id
-                        return (
-                          <div
-                            key={review.id}
-                            draggable={!isUpdating}
-                            onDragStart={(e) => handleDragStart(e, review)}
-                            onDragEnd={handleDragEnd}
-                            className={cn(
-                              "group relative rounded-md border bg-card p-1.5 shadow-sm transition-all cursor-move shrink-0",
-                              getReviewColor(review.review_interval, review.completed),
-                              isDragging && "opacity-40 scale-95",
-                              !isUpdating && "hover:shadow-md hover:scale-[1.02] active:scale-95"
-                            )}
-                          >
-                            <div className="flex items-start gap-1">
-                              <Checkbox
-                                checked={review.completed}
-                                onCheckedChange={() => handleToggleComplete(review.id, review.completed)}
-                                className="mt-0.5 h-3 w-3 shrink-0"
-                                disabled={isUpdating}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                              <GripVertical className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0 opacity-50 group-hover:opacity-100" />
-                              <div className="flex-1 min-w-0">
-                                <Link
-                                  href={`/dashboard/review/${review.id}`}
-                                  className="text-[11px] font-medium leading-tight hover:underline line-clamp-2 block"
-                                  title={lessonTitle}
-                                  onClick={(e) => {
-                                    if (isDragging) e.preventDefault()
-                                  }}
-                                >
-                                  {lessonTitle}
-                                </Link>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : null}
+                  {renderDayReviewList(dateString, dayReviews)}
                 </div>
               )
             })}
@@ -484,87 +566,20 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
               <span className="text-muted-foreground">Day 0</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-purple-500" />
+              <div className="h-3 w-3 rounded-full bg-green-500" />
               <span className="text-muted-foreground">Day 1</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-orange-500" />
+              <div className="h-3 w-3 rounded-full bg-yellow-500" />
               <span className="text-muted-foreground">Day 3</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-pink-500" />
+              <div className="h-3 w-3 rounded-full bg-purple-500" />
               <span className="text-muted-foreground">Day 7</span>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      <Dialog open={!!selectedDate} onOpenChange={(open) => !open && setSelectedDate(null)}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>{selectedDateLabel}</DialogTitle>
-            <DialogDescription>
-              {selectedReviews.length
-                ? "Review the lessons scheduled for this day."
-                : "No reviews scheduled for this date."}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedReviews.length > 0 && (
-            <div className="space-y-3">
-              {selectedReviews.map((review) => {
-                const lessonTitle = review.lessons?.title ?? "Untitled lesson"
-                const lessonTypeLabel = review.lessons?.lesson_type ?? "lesson"
-                const isDragging = draggedReview?.id === review.id
-                return (
-                  <div
-                    key={review.id}
-                    draggable={!isUpdating}
-                    onDragStart={(e) => handleDragStart(e, review)}
-                    onDragEnd={handleDragEnd}
-                    className={cn(
-                      "rounded-lg border p-4 transition-all cursor-move",
-                      getReviewColor(review.review_interval, review.completed),
-                      isDragging && "opacity-40 scale-95",
-                      !isUpdating && "hover:shadow-md hover:scale-[1.01] active:scale-95"
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={review.completed}
-                        onCheckedChange={() => handleToggleComplete(review.id, review.completed)}
-                        className="mt-1 h-4 w-4 shrink-0"
-                        disabled={isUpdating}
-                      />
-                      <GripVertical className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium leading-snug">{lessonTitle}</p>
-                            <p className="text-sm text-muted-foreground capitalize">{lessonTypeLabel}</p>
-                          </div>
-                          <Badge variant={review.completed ? "secondary" : "outline"} className="whitespace-nowrap">
-                            {review.completed ? "Completed" : "Pending"}
-                          </Badge>
-                        </div>
-                        <Link
-                          href={`/dashboard/review/${review.id}`}
-                          className="mt-2 inline-flex text-sm text-primary hover:underline"
-                          onClick={(e) => {
-                            if (isDragging) e.preventDefault()
-                          }}
-                        >
-                          View review
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         <Card>
@@ -574,7 +589,7 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
           <CardContent className="space-y-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total Reviews:</span>
-              <span className="font-medium">{reviews.length}</span>
+              <span className="font-medium">{resolvedReviews.length}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Completed:</span>
@@ -593,7 +608,7 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
           </CardHeader>
           <CardContent className="space-y-2">
             {[0, 1, 3, 7].map((interval) => {
-              const count = reviews.filter((review) => review.review_interval === interval).length
+              const count = resolvedReviews.filter((review) => review.review_interval === interval).length
               return (
                 <div key={interval} className="flex justify-between">
                   <span className="text-muted-foreground">{interval === 0 ? "Same Day" : `Day ${interval}`}:</span>

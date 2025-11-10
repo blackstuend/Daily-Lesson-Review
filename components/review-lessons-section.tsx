@@ -9,9 +9,18 @@ import { ReviewCard } from "@/components/review-card"
 interface ReviewLessonsSectionProps {
   reviews: any[]
   linkedChildrenMap?: Record<string, any[]>
+  title?: string
+  description?: string
+  dayLabel?: string
 }
 
-export function ReviewLessonsSection({ reviews, linkedChildrenMap = {} }: ReviewLessonsSectionProps) {
+export function ReviewLessonsSection({
+  reviews,
+  linkedChildrenMap = {},
+  title = "Today's Review Lessons",
+  description = "Linked lesson cards include their related words and sentences so everything stays together.",
+  dayLabel = "today",
+}: ReviewLessonsSectionProps) {
   const [selectedDay, setSelectedDay] = useState<number | "all">("all")
   const [selectedType, setSelectedType] = useState<string>("all")
 
@@ -76,8 +85,8 @@ export function ReviewLessonsSection({ reviews, linkedChildrenMap = {} }: Review
   return (
     <Card className="mb-8">
       <CardHeader>
-        <CardTitle>Today&apos;s Review Lessons</CardTitle>
-        <CardDescription>Linked lesson cards include their related words and sentences so everything stays together.</CardDescription>
+        <CardTitle>{title}</CardTitle>
+        {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent>
         <div className="mb-4">
@@ -120,7 +129,7 @@ export function ReviewLessonsSection({ reviews, linkedChildrenMap = {} }: Review
         ) : (
           <div className="py-8 text-center text-muted-foreground">
             <p>
-              No {selectedType !== "all" ? `${selectedType} ` : ""}lessons for {selectedDay === "all" ? "today" : `Day ${selectedDay}`}.
+              No {selectedType !== "all" ? `${selectedType} ` : ""}lessons for {selectedDay === "all" ? dayLabel : `Day ${selectedDay}`}.
             </p>
           </div>
         )}
