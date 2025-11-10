@@ -90,9 +90,8 @@ export function ReviewLessonsSection({
       </CardHeader>
       <CardContent>
         <div className="mb-4">
-          <label className="text-sm font-medium mb-2 block">Filter by type</label>
           <Select value={selectedType} onValueChange={setSelectedType}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-fit">
               <SelectValue placeholder="Select lesson type" />
             </SelectTrigger>
             <SelectContent>

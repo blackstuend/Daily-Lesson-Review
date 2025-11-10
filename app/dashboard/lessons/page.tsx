@@ -223,9 +223,8 @@ export default function LessonsPage() {
         </div>
 
         <div>
-          <label className="text-sm font-medium mb-2 block">Filter by type</label>
           <Select value={selectedType} onValueChange={setSelectedType}>
-            <SelectTrigger className="w-full sm:w-[280px]">
+            <SelectTrigger className="w-fit">
               <SelectValue placeholder="Select lesson type" />
             </SelectTrigger>
             <SelectContent>
