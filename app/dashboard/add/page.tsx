@@ -39,9 +39,10 @@ export default function AddLessonPage() {
     const supabase = createClient()
     setIsLoading(true)
     setError(null)
-    const selectedDate = new Date(lessonDate)
-    selectedDate.setHours(0, 0, 0, 0)
-    const lessonDateIso = selectedDate.toISOString()
+    // Format date as YYYY-MM-DD to preserve the user's calendar date
+    // This prevents timezone conversion issues where midnight local time
+    // becomes the previous day in UTC
+    const lessonDateString = format(lessonDate, 'yyyy-MM-dd')
 
     try {
       const {
@@ -55,7 +56,7 @@ export default function AddLessonPage() {
         content: content || null,
         lesson_type: lessonType,
         link_url: lessonType === "link" ? linkUrl : null,
-        lesson_date: lessonDateIso,
+        lesson_date: lessonDateString,
       })
 
       if (insertError) throw insertError
