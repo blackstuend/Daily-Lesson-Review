@@ -17,6 +17,7 @@ type ReviewWithLesson = {
 export type DashboardData = {
   todayReviews: ReviewWithLesson[]
   totalLessons: number
+  waitingLessons: number
 }
 
 function buildTodayString() {
@@ -28,7 +29,11 @@ export const getDashboardData = cache(async (): Promise<DashboardData> => {
     const supabase = await getSupabaseServerClient()
     const today = buildTodayString()
 
-    const [{ data: todayReviews, error: todayError }, { count: totalLessons, error: lessonsError }] = await Promise.all([
+    const [
+      { data: todayReviews, error: todayError },
+      { count: totalLessons, error: lessonsError },
+      { count: waitingLessons, error: waitingError },
+    ] = await Promise.all([
       supabase
         .from("review_schedule")
         .select(REVIEW_SELECT)
@@ -36,6 +41,7 @@ export const getDashboardData = cache(async (): Promise<DashboardData> => {
         .order("completed", { ascending: true })
         .order("created_at", { ascending: false }),
       supabase.from("lessons").select("*", { count: "exact", head: true }),
+      supabase.from("waiting_lessons").select("*", { count: "exact", head: true }),
     ])
 
     if (todayError == null) {
@@ -53,9 +59,18 @@ export const getDashboardData = cache(async (): Promise<DashboardData> => {
       throw new Error(`Failed to fetch total lessons: ${supabaseError.message}`)
     }
 
+    if (waitingError == null) {
+      // ok
+    } else {
+      const supabaseError = waitingError
+      handleSessionError(supabaseError)
+      throw new Error(`Failed to fetch waiting lessons: ${supabaseError.message}`)
+    }
+
     return {
       todayReviews: todayReviews ?? [],
       totalLessons: totalLessons ?? 0,
+      waitingLessons: waitingLessons ?? 0,
     }
   } catch (error) {
     handleSessionError(error)

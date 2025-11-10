@@ -14,6 +14,7 @@ export function NavHeader() {
   const resetDashboard = useDashboardStore((state) => state.reset)
   const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
+    { href: "/dashboard/wait", label: "Waiting List" },
     { href: "/dashboard/add", label: "Add Lesson" },
     { href: "/dashboard/lessons", label: "Lessons" },
     { href: "/dashboard/reviews", label: "Reviews" },

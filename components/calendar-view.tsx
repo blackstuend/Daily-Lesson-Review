@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronLeft, ChevronRight, GripVertical } from "lucide-react"
+import { ChevronLeft, ChevronRight, GripVertical, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { groupReviewsByLinkedResource } from "@/lib/review-grouping"
@@ -138,6 +138,10 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
       default:
         return "border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800"
     }
+  }
+
+  const isAllDayLessonsCompleted = (dayReviews: ReviewWithLesson[]) => {
+    return dayReviews.length > 0 && dayReviews.every((review) => review.completed)
   }
 
   const firstDay = new Date(currentYear, currentMonth, 1)
@@ -289,6 +293,7 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
         draggable={!isUpdating}
         onDragStart={(e) => handleDragStart(e, review)}
         onDragEnd={handleDragEnd}
+        onClick={(e) => e.stopPropagation()}
         className={cn(
           "group relative rounded-md border bg-card p-1.5 shadow-sm transition-all cursor-move shrink-0",
           getReviewColor(review.review_interval, review.completed),
@@ -321,6 +326,7 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
               )}
               title={lessonTitle}
               onClick={(e) => {
+                e.stopPropagation()
                 if (isDragging) e.preventDefault()
               }}
             >
@@ -437,11 +443,18 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
                 >
                   <div className="sticky top-0 z-10 flex items-center justify-between px-2 py-1.5 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 border-b">
                     <div className="text-sm font-semibold text-muted-foreground">{day}</div>
-                    {dayReviews.length > 0 && (
-                      <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-medium">
-                        {dayReviews.length}
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {isAllDayLessonsCompleted(dayReviews) && (
+                        <Badge variant="default" className="text-[10px] h-4 px-1.5 font-medium bg-emerald-500 hover:bg-emerald-600 gap-0.5">
+                          <CheckCircle2 className="h-2.5 w-2.5" />
+                        </Badge>
+                      )}
+                      {dayReviews.length > 0 && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-medium">
+                          {dayReviews.length}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
                   {renderDayReviewList(dateString, dayReviews)}
@@ -493,11 +506,18 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
                 >
                   <div className="sticky top-0 z-10 flex items-center justify-between px-2 py-1.5 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 border-b">
                     <div className="text-sm font-semibold">{day}</div>
-                    {dayReviews.length > 0 && (
-                      <Badge variant="secondary" className="text-[10px] h-4 px-1.5 font-medium">
-                        {dayReviews.length}
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {isAllDayLessonsCompleted(dayReviews) && (
+                        <Badge variant="default" className="text-[10px] h-4 px-1.5 font-medium bg-emerald-500 hover:bg-emerald-600 gap-0.5">
+                          <CheckCircle2 className="h-2.5 w-2.5" />
+                        </Badge>
+                      )}
+                      {dayReviews.length > 0 && (
+                        <Badge variant="secondary" className="text-[10px] h-4 px-1.5 font-medium">
+                          {dayReviews.length}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
                   {renderDayReviewList(dateString, dayReviews)}
@@ -543,11 +563,18 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
                 >
                   <div className="sticky top-0 z-10 flex items-center justify-between px-2 py-1.5 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 border-b">
                     <div className="text-sm font-semibold text-muted-foreground">{day}</div>
-                    {dayReviews.length > 0 && (
-                      <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-medium">
-                        {dayReviews.length}
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {isAllDayLessonsCompleted(dayReviews) && (
+                        <Badge variant="default" className="text-[10px] h-4 px-1.5 font-medium bg-emerald-500 hover:bg-emerald-600 gap-0.5">
+                          <CheckCircle2 className="h-2.5 w-2.5" />
+                        </Badge>
+                      )}
+                      {dayReviews.length > 0 && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-medium">
+                          {dayReviews.length}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
                   {renderDayReviewList(dateString, dayReviews)}

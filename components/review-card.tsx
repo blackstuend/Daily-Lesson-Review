@@ -317,7 +317,7 @@ export function ReviewCard({
 
         {hasLinkedChildren && (
           <div className="mt-4 w-full space-y-2 border-t pt-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Linked items due</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Related items</div>
             <div className="space-y-2">
               {linkedChildren.map((child) => (
                 <ReviewCard

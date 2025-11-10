@@ -19,6 +19,7 @@ type DashboardData = {
   todayReviews: ReviewWithLesson[]
   pendingCount: number
   totalLessons: number
+  waitingLessons: number
 }
 
 type ReviewsData = {
@@ -107,23 +108,29 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       const supabase = createClient()
       const today = buildTodayString()
 
-      const [{ data: todayReviews, error: todayError }, { count: totalLessons, error: lessonsError }] = await Promise.all(
-        [
-          supabase
-            .from("review_schedule")
-            .select(REVIEW_SELECT)
-            .eq("review_date", today)
-            .order("completed", { ascending: true })
-            .order("created_at", { ascending: false }),
-          supabase.from("lessons").select("*", { count: "exact", head: true }),
-        ],
-      )
+      const [
+        { data: todayReviews, error: todayError },
+        { count: totalLessons, error: lessonsError },
+        { count: waitingLessons, error: waitingError },
+      ] = await Promise.all([
+        supabase
+          .from("review_schedule")
+          .select(REVIEW_SELECT)
+          .eq("review_date", today)
+          .order("completed", { ascending: true })
+          .order("created_at", { ascending: false }),
+        supabase.from("lessons").select("*", { count: "exact", head: true }),
+        supabase.from("waiting_lessons").select("*", { count: "exact", head: true }),
+      ])
 
       if (todayError) {
         throw todayError
       }
       if (lessonsError) {
         throw lessonsError
+      }
+      if (waitingError) {
+        throw waitingError
       }
 
       const pendingCount = (todayReviews ?? []).filter((review) => !review.completed).length
@@ -133,6 +140,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
           todayReviews: todayReviews ?? [],
           pendingCount,
           totalLessons: totalLessons ?? 0,
+          waitingLessons: waitingLessons ?? 0,
         },
       })
     } catch (error) {

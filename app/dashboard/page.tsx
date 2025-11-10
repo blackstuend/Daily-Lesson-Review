@@ -16,6 +16,7 @@ export default async function DashboardPage() {
   ])
 
   const totalLessons = dashboardData.totalLessons
+  const waitingLessons = dashboardData.waitingLessons
   const todayReviews = dashboardData.todayReviews
   const groupedToday = groupReviewsByLinkedResource(todayReviews)
   const visibleTodayReviews = groupedToday.displayReviews
@@ -28,7 +29,7 @@ export default async function DashboardPage() {
         <p className="text-muted-foreground">Here&apos;s your learning overview for today</p>
       </div>
 
-      <div className="mb-8 grid gap-4 md:grid-cols-3">
+      <div className="mb-8 grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Today&apos;s Reviews</CardTitle>
@@ -53,13 +54,29 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Waiting List</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{waitingLessons}</div>
+            <p className="text-xs text-muted-foreground">Lessons queued to start</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
             <Plus className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <Button asChild className="w-full">
-              <Link href="/dashboard/add">Add New Lesson</Link>
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button asChild className="w-full">
+                <Link href="/dashboard/add">Add New Lesson</Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/dashboard/wait">Open Waiting List</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

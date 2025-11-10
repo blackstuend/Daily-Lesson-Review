@@ -6,6 +6,7 @@ A spaced repetition learning application that helps you master and retain what y
 
 - **Spaced Repetition System**: Review lessons at optimal intervals (0, 1, 3, and 7 days) to maximize retention
 - **Flexible Study Items**: Save links, difficult words, or sentences you want to remember
+- **Waiting List**: Stage lessons you plan to learn later, then promote them into the main study flow when ready
 - **Daily Reviews**: Get reminded to review at the right time
 - **Progress Tracking**: Visualize your learning journey with calendar view
 - **User Authentication**: Secure authentication powered by Supabase
@@ -61,6 +62,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 Run the SQL scripts in the `scripts/` directory in your Supabase SQL editor:
 - `001_create_lessons_table.sql` - Creates the lessons and review_schedule tables
 - `002_create_review_trigger.sql` - Sets up automatic review scheduling
+- `003_add_lesson_date_column.sql` - Adds explicit lesson dates to avoid timezone drift
+- `004_fix_review_schedule_trigger.sql` - Ensures review schedules stay in sync
+- `005_add_linked_lessons_relation.sql` - Allows lessons to reference a related lesson
+- `006_create_waiting_lessons_table.sql` - Adds the waiting list table plus the promotion helper function
 
 5. Run the development server:
 ```bash
