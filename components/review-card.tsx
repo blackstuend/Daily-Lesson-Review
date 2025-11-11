@@ -168,7 +168,18 @@ export function ReviewCard({
             <h3
               className={`font-medium ${optimisticCompleted && showTodoStyle ? "text-muted-foreground line-through" : ""}`}
             >
-              {review.lessons.title}
+              {review.lessons.lesson_type === "link" && review.lessons.link_url ? (
+                <a
+                  href={review.lessons.link_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-inherit underline hover:text-primary"
+                >
+                  {review.lessons.title}
+                </a>
+              ) : (
+                review.lessons.title
+              )}
             </h3>
             {!(hideBadgesWhenCompleted && optimisticCompleted) && (
               <>
