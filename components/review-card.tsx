@@ -2,13 +2,14 @@
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ExternalLink, Trash2, Undo2, Calendar as CalendarIcon, ChevronRight, Pencil, Link2 } from "lucide-react"
+import { ExternalLink, Trash2, Undo2, Calendar as CalendarIcon, ChevronRight, Pencil, Link2, Plus } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { EditLessonDialog } from "@/components/edit-lesson-dialog"
 import { TTSButton } from "@/components/ui/tts-button"
+import { QuickAddLinkedLessonDialog } from "@/components/quick-add-linked-lesson-dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,6 +55,7 @@ export function ReviewCard({
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showQuickAddDialog, setShowQuickAddDialog] = useState(false)
   const router = useRouter()
 
   // Sync optimistic state when review data updates from server
@@ -234,11 +236,25 @@ export function ReviewCard({
               <TTSButton text={review.lessons.title} />
             )}
           {review.lessons.lesson_type === "link" && review.lessons.link_url && (
-            <Button variant="ghost" size="sm" asChild disabled={isLoading}>
-              <a href={review.lessons.link_url} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </Button>
+            <>
+              <Button variant="ghost" size="sm" asChild disabled={isLoading}>
+                <a href={review.lessons.link_url} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
+              {!isNested && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowQuickAddDialog(true)}
+                  disabled={isLoading}
+                  title="Add lesson linked to this resource"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="ml-1">Add Linked</span>
+                </Button>
+              )}
+            </>
           )}
           {!isNested && linkedLesson?.link_url && review.lessons.lesson_type !== "link" && (
             <Button variant="ghost" size="sm" asChild disabled={isLoading} title="Open linked resource">
@@ -375,6 +391,20 @@ export function ReviewCard({
               router.refresh()
             }
           }}
+        />
+      )}
+
+      {showQuickAddDialog && review.lessons.lesson_type === "link" && (
+        <QuickAddLinkedLessonDialog
+          open={showQuickAddDialog}
+          onOpenChange={(open) => {
+            setShowQuickAddDialog(open)
+            if (!open) {
+              router.refresh()
+            }
+          }}
+          linkedLessonId={review.lessons.id}
+          linkedLessonTitle={review.lessons.title}
         />
       )}
     </>
