@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-const REVIEW_SELECT = "*, lessons(*, linked_lesson:linked_lesson_id(id, title, lesson_type, link_url))"
+const REVIEW_SELECT = "*, lessons(*, tts_audio_url, tts_audio_accent, tts_audio_generated_at, linked_lesson:linked_lesson_id(id, title, lesson_type, link_url))"
 
 export default function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -28,6 +28,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const [isCompleting, setIsCompleting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [ttsAudioUrl, setTtsAudioUrl] = useState<string | null>(null)
+  const [ttsAudioAccent, setTtsAudioAccent] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -36,6 +38,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       const { data } = await supabase.from("review_schedule").select(REVIEW_SELECT).eq("id", id).single()
 
       setReview(data)
+      setTtsAudioUrl(data?.lessons?.tts_audio_url || null)
+      setTtsAudioAccent(data?.lessons?.tts_audio_accent || null)
       setIsLoading(false)
     }
 
@@ -111,7 +115,18 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
           <div className="flex items-center gap-3">
             <CardTitle className="text-2xl flex-1">{review.lessons.title}</CardTitle>
             {(review.lessons.lesson_type === "word" || review.lessons.lesson_type === "sentence") && (
-              <TTSButton text={review.lessons.title} size="icon" variant="outline" />
+              <TTSButton
+                text={review.lessons.title}
+                lessonId={review.lessons.id}
+                ttsAudioUrl={ttsAudioUrl}
+                ttsAudioAccent={ttsAudioAccent}
+                onTTSGenerated={(audioUrl, accent) => {
+                  setTtsAudioUrl(audioUrl)
+                  setTtsAudioAccent(accent)
+                }}
+                size="icon"
+                variant="outline"
+              />
             )}
           </div>
           <CardDescription>Review this lesson to reinforce your learning</CardDescription>

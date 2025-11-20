@@ -126,7 +126,13 @@ export function useTTS(options?: UseTTSOptions) {
   }, [audioManager, options]);
 
   const speak = useCallback(
-    async (text: string) => {
+    async (
+      text: string,
+      lessonId?: string,
+      cachedAudioUrl?: string | null,
+      cachedAccent?: string | null,
+      onTTSGenerated?: (audioUrl: string, accent: string) => void
+    ) => {
       if (!isEnabled) {
         toast.error("Text-to-speech is disabled in settings");
         return;
@@ -146,34 +152,60 @@ export function useTTS(options?: UseTTSOptions) {
 
         setIsLoading(true);
 
-        // Call the TTS API
-        const response = await fetch("/api/tts", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            text: text.trim(),
-            accent,
-          }),
-        });
+        let audioUrl: string;
+        let wasGenerated = false;
 
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({
-            error: "Failed to generate speech",
-          }));
-          throw new Error(error.error || "Failed to generate speech");
+        // Check if we have a cached URL that matches the current accent
+        if (cachedAudioUrl && cachedAccent === accent) {
+          // Use cached URL directly - no API call needed!
+          audioUrl = cachedAudioUrl;
+        } else {
+          // Need to generate or fetch from API
+          // Call the TTS API (userId will be fetched on server side)
+          const response = await fetch("/api/tts", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              text: text.trim(),
+              accent,
+              lessonId,
+            }),
+          });
+
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({
+              error: "Failed to generate speech",
+            }));
+            throw new Error(error.error || "Failed to generate speech");
+          }
+
+          // Check if response is JSON (cached URL) or audio blob
+          const contentType = response.headers.get("content-type");
+
+          if (contentType?.includes("application/json")) {
+            // Response is JSON with audioUrl
+            const data = await response.json();
+            audioUrl = data.audioUrl;
+            wasGenerated = !data.cached;
+          } else {
+            // Response is audio blob (backward compatibility)
+            const audioBlob = await response.blob();
+            audioUrl = URL.createObjectURL(audioBlob);
+          }
         }
-
-        // Create blob from audio data
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
 
         // Create and play audio through global manager
         const audio = new Audio(audioUrl);
 
         setIsLoading(false);
         await audioManager.play(text, audioUrl, audio);
+
+        // Notify parent component if TTS was newly generated
+        if (wasGenerated && onTTSGenerated) {
+          onTTSGenerated(audioUrl, accent);
+        }
       } catch (error) {
         setIsLoading(false);
         const err = error instanceof Error ? error : new Error("Unknown error");
@@ -192,5 +224,6 @@ export function useTTS(options?: UseTTSOptions) {
     isLoading,
     isEnabled,
     currentText,
+    accent,
   };
 }

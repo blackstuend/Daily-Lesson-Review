@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { uploadTTSAudio } from "@/lib/supabase/storage";
 
 export const runtime = "edge";
 
@@ -13,7 +15,7 @@ export type Accent = keyof typeof VOICE_MAPPING;
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, accent = "american" } = await request.json();
+    const { text, accent = "american", lessonId } = await request.json();
 
     if (!text || typeof text !== "string") {
       return NextResponse.json(
@@ -35,6 +37,37 @@ export async function POST(request: NextRequest) {
         { error: "OpenAI API key not configured" },
         { status: 500 }
       );
+    }
+
+    // If lessonId provided, check if TTS already exists in database
+    let userId: string | undefined;
+    if (lessonId) {
+      const supabase = await createClient();
+
+      // Get userId from server-side session
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id;
+
+      if (!userId) {
+        return NextResponse.json(
+          { error: "Unauthorized" },
+          { status: 401 }
+        );
+      }
+
+      const { data: lesson, error: lessonError } = await supabase
+        .from("lessons")
+        .select("tts_audio_url, tts_audio_accent")
+        .eq("id", lessonId)
+        .single();
+
+      // If TTS exists and accent matches, return the stored URL
+      if (!lessonError && lesson?.tts_audio_url && lesson.tts_audio_accent === accent) {
+        return NextResponse.json({
+          audioUrl: lesson.tts_audio_url,
+          cached: true
+        });
+      }
     }
 
     // Get the voice based on accent preference
@@ -68,7 +101,32 @@ export async function POST(request: NextRequest) {
     // Get the audio data as array buffer
     const audioData = await response.arrayBuffer();
 
-    // Return the audio data with appropriate headers
+    // If lessonId provided, store in Supabase Storage and update database
+    if (lessonId && userId) {
+      const audioUrl = await uploadTTSAudio(userId, lessonId, accent, audioData);
+
+      if (audioUrl) {
+        const supabase = await createClient();
+
+        // Update lesson with TTS metadata
+        await supabase
+          .from("lessons")
+          .update({
+            tts_audio_url: audioUrl,
+            tts_audio_accent: accent,
+            tts_audio_generated_at: new Date().toISOString()
+          })
+          .eq("id", lessonId);
+
+        // Return JSON with audio URL for cached access
+        return NextResponse.json({
+          audioUrl,
+          cached: false
+        });
+      }
+    }
+
+    // Return the audio data with appropriate headers (backward compatibility)
     return new NextResponse(audioData, {
       status: 200,
       headers: {

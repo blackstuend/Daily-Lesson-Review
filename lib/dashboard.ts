@@ -2,7 +2,7 @@ import { cache } from "react"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { handleSessionError } from "@/lib/auth-error-handler"
 
-const REVIEW_SELECT = "*, lessons(*, linked_lesson:linked_lesson_id(id, title, lesson_type, link_url))"
+const REVIEW_SELECT = "*, lessons(*, tts_audio_url, tts_audio_accent, tts_audio_generated_at, linked_lesson:linked_lesson_id(id, title, lesson_type, link_url))"
 
 type ReviewWithLesson = {
   id: string

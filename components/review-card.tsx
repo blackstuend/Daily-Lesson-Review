@@ -56,12 +56,16 @@ export function ReviewCard({
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showQuickAddDialog, setShowQuickAddDialog] = useState(false)
+  const [ttsAudioUrl, setTtsAudioUrl] = useState<string | null>(review.lessons?.tts_audio_url || null)
+  const [ttsAudioAccent, setTtsAudioAccent] = useState<string | null>(review.lessons?.tts_audio_accent || null)
   const router = useRouter()
 
   // Sync optimistic state when review data updates from server
   useEffect(() => {
     setOptimisticCompleted(review.completed)
-  }, [review.completed])
+    setTtsAudioUrl(review.lessons?.tts_audio_url || null)
+    setTtsAudioAccent(review.lessons?.tts_audio_accent || null)
+  }, [review.completed, review.lessons?.tts_audio_url, review.lessons?.tts_audio_accent])
 
   const isLoading = isDeleting || isUpdating
 
@@ -233,7 +237,16 @@ export function ReviewCard({
 
         <div className="ml-4 flex flex-wrap gap-2">
         {(review.lessons.lesson_type === "word" || review.lessons.lesson_type === "sentence") && (
-              <TTSButton text={review.lessons.title} />
+              <TTSButton
+                text={review.lessons.title}
+                lessonId={review.lessons.id}
+                ttsAudioUrl={ttsAudioUrl}
+                ttsAudioAccent={ttsAudioAccent}
+                onTTSGenerated={(audioUrl, accent) => {
+                  setTtsAudioUrl(audioUrl)
+                  setTtsAudioAccent(accent)
+                }}
+              />
             )}
           {review.lessons.lesson_type === "link" && review.lessons.link_url && (
             <>
