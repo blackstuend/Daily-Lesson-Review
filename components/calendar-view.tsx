@@ -185,10 +185,15 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
     router.push(`/dashboard/calendar/${dateString}`)
   }
 
-  const handleDragStart = (e: React.DragEvent, review: ReviewWithLesson) => {
+  const handleDragStart = (e: React.DragEvent, review: ReviewWithLesson, cardElement: HTMLElement) => {
     setDraggedReview(review)
     e.dataTransfer.effectAllowed = "move"
-    e.dataTransfer.setData("text/html", e.currentTarget.innerHTML)
+
+    // Set the entire card as the drag image instead of just the grip handle
+    if (cardElement) {
+      const rect = cardElement.getBoundingClientRect()
+      e.dataTransfer.setDragImage(cardElement, rect.width / 2, rect.height / 2)
+    }
   }
 
   const handleDragEnd = () => {
@@ -286,42 +291,73 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
   ) => {
     const lessonTitle = review.lessons?.title ?? "Untitled lesson"
     const isDragging = draggedReview?.id === review.id
+    let cardRef: HTMLDivElement | null = null
 
     return (
       <div
         key={review.id}
-        draggable={!isUpdating}
-        onDragStart={(e) => handleDragStart(e, review)}
-        onDragEnd={handleDragEnd}
+        ref={(el) => (cardRef = el)}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          "group relative rounded-md border bg-card p-1.5 shadow-sm transition-all cursor-move shrink-0",
+          "group relative rounded-md border bg-card p-1.5 shadow-sm transition-all shrink-0",
           getReviewColor(review.review_interval, review.completed),
           isDragging && "opacity-40 scale-95",
-          !isUpdating && "hover:shadow-md hover:scale-[1.02] active:scale-95",
+          !isUpdating && "hover:shadow-md",
           isChild && "border-dashed bg-muted/70 pl-2 pr-2"
         )}
       >
         <div className="flex items-start gap-1.5">
-          <Checkbox
-            checked={review.completed}
-            onCheckedChange={() => handleToggleComplete(review)}
-            className={cn("mt-0.5 shrink-0", isChild ? "size-4" : "size-5")}
-            disabled={isUpdating || isReviewPending(review.id)}
-            onClick={(e) => e.stopPropagation()}
-            aria-label={review.completed ? "Mark review incomplete" : "Mark review complete"}
-          />
-          <GripVertical
-            className={cn(
-              "text-muted-foreground mt-0.5 shrink-0 opacity-50 transition-opacity group-hover:opacity-100",
-              isChild ? "h-3 w-3" : "h-4 w-4"
-            )}
-          />
-          <div className="flex-1 min-w-0">
+          <div
+            onMouseDown={(e) => {
+              // Prevent checkbox area from initiating drag
+              e.stopPropagation()
+            }}
+          >
+            <Checkbox
+              checked={review.completed}
+              onCheckedChange={() => {
+                // Prevent checkbox from triggering during drag
+                if (isDragging) return
+                handleToggleComplete(review)
+              }}
+              className={cn("mt-0.5 shrink-0", isChild ? "size-4" : "size-5")}
+              disabled={isUpdating || isReviewPending(review.id)}
+              onClick={(e) => e.stopPropagation()}
+              aria-label={review.completed ? "Mark review incomplete" : "Mark review complete"}
+            />
+          </div>
+          <div
+            draggable={!isUpdating}
+            onDragStart={(e) => {
+              e.stopPropagation()
+              if (cardRef) {
+                handleDragStart(e, review, cardRef)
+              }
+            }}
+            onDragEnd={(e) => {
+              e.stopPropagation()
+              handleDragEnd()
+            }}
+            className="drag-handle"
+          >
+            <GripVertical
+              className={cn(
+                "text-muted-foreground mt-0.5 shrink-0 opacity-50 transition-opacity group-hover:opacity-100 cursor-grab active:cursor-grabbing",
+                isChild ? "h-3 w-3" : "h-4 w-4"
+              )}
+            />
+          </div>
+          <div
+            className="flex-1 min-w-0"
+            onMouseDown={(e) => {
+              // Prevent link area from initiating drag
+              e.stopPropagation()
+            }}
+          >
             <Link
               href={`/dashboard/review/${review.id}`}
               className={cn(
-                "font-medium leading-tight hover:underline block",
+                "font-medium leading-tight hover:underline block cursor-pointer",
                 isChild ? "text-[10px]" : "text-[11px]"
               )}
               title={lessonTitle}
@@ -335,7 +371,14 @@ export function CalendarView({ reviews, currentMonth, currentYear }: CalendarVie
           </div>
         </div>
         {!isChild && childReviews.length > 0 && (
-          <div className="mt-1.5 space-y-1 border-l border-dashed border-border/60 pl-2">
+          <div
+            className="children-container mt-1.5 space-y-1 border-l border-dashed border-border/60 pl-2"
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => {
+              // Prevent children container from initiating parent drag
+              e.stopPropagation()
+            }}
+          >
             {childReviews.map((child) => renderCompactReview(child, [], true))}
           </div>
         )}
