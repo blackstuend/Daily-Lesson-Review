@@ -12,6 +12,8 @@ import { Calendar as CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useDashboardStore } from "@/stores/dashboard-store"
+import { generateTTSForLesson } from "@/lib/tts-utils"
+import { useTTSStore } from "@/stores/tts-store"
 import {
   Dialog,
   DialogContent,
@@ -53,6 +55,7 @@ export function QuickAddLinkedLessonDialog({
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData)
+  const accent = useTTSStore((state) => state.accent)
 
   const handleClose = (saved?: boolean) => {
     if (!isLoading) {
@@ -89,16 +92,38 @@ export function QuickAddLinkedLessonDialog({
       selectedDate.setHours(0, 0, 0, 0)
       const lessonDateString = format(selectedDate, "yyyy-MM-dd")
 
-      // Insert lesson with linked_lesson_id pre-populated
-      const { error: insertError } = await supabase.from("lessons").insert({
-        user_id: user.id,
-        title,
-        content: content || null,
-        lesson_type: lessonType,
-        link_url: null,
-        linked_lesson_id: linkedLessonId,
-        lesson_date: lessonDateString,
+      // Generate a UUID for the lesson
+      const lessonId = crypto.randomUUID()
+
+      // Auto-generate TTS BEFORE inserting lesson (words and sentences only)
+      const ttsData = await generateTTSForLesson({
+        lessonId,
+        text: title,
+        accent,
+        skipDatabaseUpdate: true,
       })
+
+      // If TTS generation failed, we still continue with lesson creation
+      if (!ttsData) {
+        console.warn("TTS generation failed, creating lesson without TTS")
+      }
+
+      // Insert lesson with pre-generated ID, linked_lesson_id, and TTS data
+      const { error: insertError } = await supabase
+        .from("lessons")
+        .insert({
+          id: lessonId,
+          user_id: user.id,
+          title,
+          content: content || null,
+          lesson_type: lessonType,
+          link_url: null,
+          linked_lesson_id: linkedLessonId,
+          lesson_date: lessonDateString,
+          tts_audio_url: ttsData?.audioUrl || null,
+          tts_audio_accent: ttsData?.accent || null,
+          tts_audio_generated_at: ttsData?.generatedAt || null,
+        })
 
       if (insertError) throw insertError
 

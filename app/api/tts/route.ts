@@ -15,7 +15,7 @@ export type Accent = keyof typeof VOICE_MAPPING;
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, accent = "american", lessonId } = await request.json();
+    const { text, accent = "american", lessonId, skipDatabaseUpdate } = await request.json();
 
     if (!text || typeof text !== "string") {
       return NextResponse.json(
@@ -39,22 +39,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If lessonId provided, check if TTS already exists in database
-    let userId: string | undefined;
-    if (lessonId) {
-      const supabase = await createClient();
+    // Get user session
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
-      // Get userId from server-side session
-      const { data: { user } } = await supabase.auth.getUser();
-      userId = user?.id;
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
-      if (!userId) {
-        return NextResponse.json(
-          { error: "Unauthorized" },
-          { status: 401 }
-        );
-      }
-
+    // If lessonId provided and not skipping database check, see if TTS already exists
+    if (lessonId && !skipDatabaseUpdate) {
       const { data: lesson, error: lessonError } = await supabase
         .from("lessons")
         .select("tts_audio_url, tts_audio_accent")
@@ -65,6 +63,8 @@ export async function POST(request: NextRequest) {
       if (!lessonError && lesson?.tts_audio_url && lesson.tts_audio_accent === accent) {
         return NextResponse.json({
           audioUrl: lesson.tts_audio_url,
+          accent: lesson.tts_audio_accent,
+          generatedAt: new Date().toISOString(),
           cached: true
         });
       }
@@ -100,27 +100,30 @@ export async function POST(request: NextRequest) {
 
     // Get the audio data as array buffer
     const audioData = await response.arrayBuffer();
+    const generatedAt = new Date().toISOString();
 
-    // If lessonId provided, store in Supabase Storage and update database
+    // If lessonId provided, store in Supabase Storage
     if (lessonId && userId) {
       const audioUrl = await uploadTTSAudio(userId, lessonId, accent, audioData);
 
       if (audioUrl) {
-        const supabase = await createClient();
+        // Only update database if not skipping
+        if (!skipDatabaseUpdate) {
+          await supabase
+            .from("lessons")
+            .update({
+              tts_audio_url: audioUrl,
+              tts_audio_accent: accent,
+              tts_audio_generated_at: generatedAt
+            })
+            .eq("id", lessonId);
+        }
 
-        // Update lesson with TTS metadata
-        await supabase
-          .from("lessons")
-          .update({
-            tts_audio_url: audioUrl,
-            tts_audio_accent: accent,
-            tts_audio_generated_at: new Date().toISOString()
-          })
-          .eq("id", lessonId);
-
-        // Return JSON with audio URL for cached access
+        // Return JSON with audio URL and metadata
         return NextResponse.json({
           audioUrl,
+          accent,
+          generatedAt,
           cached: false
         });
       }

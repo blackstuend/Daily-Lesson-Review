@@ -18,6 +18,8 @@ import { Calendar as CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { LinkLessonSelector } from "@/components/link-lesson-selector"
+import { generateTTSForLesson } from "@/lib/tts-utils"
+import { useTTSStore } from "@/stores/tts-store"
 
 type LessonType = "link" | "word" | "sentence"
 
@@ -37,6 +39,7 @@ export default function AddLessonPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData)
+  const accent = useTTSStore((state) => state.accent)
 
   const handleLessonTypeChange = (value: LessonType) => {
     setLessonType(value)
@@ -61,17 +64,59 @@ export default function AddLessonPage() {
       } = await supabase.auth.getUser()
       if (!user) throw new Error("Not authenticated")
 
-      const { error: insertError } = await supabase.from("lessons").insert({
-        user_id: user.id,
-        title,
-        content: content || null,
-        lesson_type: lessonType,
-        link_url: lessonType === "link" ? linkUrl : null,
-        linked_lesson_id: lessonType === "link" ? null : linkedLessonId,
-        lesson_date: lessonDateString,
-      })
+      // Auto-generate TTS BEFORE inserting lesson for words and sentences
+      let ttsData: { audioUrl: string; accent: string; generatedAt: string } | null = null
+      if (lessonType === "word" || lessonType === "sentence") {
+        // Generate a UUID for the lesson
+        const lessonId = crypto.randomUUID()
 
-      if (insertError) throw insertError
+        // Generate TTS audio and upload to storage (but don't update any lesson record yet)
+        ttsData = await generateTTSForLesson({
+          lessonId,
+          text: title,
+          accent,
+          skipDatabaseUpdate: true,
+        })
+
+        // If TTS generation failed, we still continue with lesson creation
+        if (!ttsData) {
+          console.warn("TTS generation failed, creating lesson without TTS")
+        }
+
+        // Insert lesson with pre-generated ID and TTS data
+        const { error: insertError } = await supabase
+          .from("lessons")
+          .insert({
+            id: lessonId,
+            user_id: user.id,
+            title,
+            content: content || null,
+            lesson_type: lessonType,
+            link_url: null,
+            linked_lesson_id: linkedLessonId,
+            lesson_date: lessonDateString,
+            tts_audio_url: ttsData?.audioUrl || null,
+            tts_audio_accent: ttsData?.accent || null,
+            tts_audio_generated_at: ttsData?.generatedAt || null,
+          })
+
+        if (insertError) throw insertError
+      } else {
+        // For link lessons, just insert normally without TTS
+        const { error: insertError } = await supabase
+          .from("lessons")
+          .insert({
+            user_id: user.id,
+            title,
+            content: content || null,
+            lesson_type: lessonType,
+            link_url: linkUrl,
+            linked_lesson_id: null,
+            lesson_date: lessonDateString,
+          })
+
+        if (insertError) throw insertError
+      }
 
       // Force refresh dashboard data to update stats
       await fetchDashboardData(true)
