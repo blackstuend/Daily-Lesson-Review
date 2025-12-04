@@ -66,9 +66,6 @@ export function TTSButton({
       ) : (
         <Volume2 className="h-4 w-4" />
       )}
-      {isCached && !isThisTextPlaying && !isLoading && (
-        <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 ring-1 ring-background" />
-      )}
     </Button>
   );
 }
