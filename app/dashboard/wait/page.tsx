@@ -13,6 +13,7 @@ import { format } from "date-fns"
 import { LessonDialog, type WaitingLesson } from "@/components/lesson-dialog"
 import { toast } from "@/hooks/use-toast"
 import { useDashboardStore } from "@/stores/dashboard-store"
+import { useRouter } from "next/navigation"
 
 type LessonType = "link" | "word" | "sentence"
 
@@ -34,6 +35,7 @@ export default function WaitingLessonsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
 
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData)
+  const router = useRouter()
 
   const fetchWaitingLessons = useCallback(async () => {
     const supabase = createClient()
@@ -245,6 +247,7 @@ export default function WaitingLessonsPage() {
             }
           }}
           lesson={editingLesson}
+          onSuccess={() => router.refresh()}
         />
       )}
 
@@ -272,6 +275,7 @@ export default function WaitingLessonsPage() {
           setIsAddDialogOpen(open)
           if (!open) void fetchWaitingLessons()
         }}
+        onSuccess={() => router.refresh()}
       />
     </div>
   )

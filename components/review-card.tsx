@@ -447,6 +447,7 @@ export function ReviewCard({
           if (!open) router.refresh()
         }}
         lesson={review.lessons as Lesson}
+        onSuccess={() => router.refresh()}
       />
 
       {review.lessons.lesson_type === "link" && (
@@ -459,6 +460,7 @@ export function ReviewCard({
           }}
           linkedLessonId={review.lessons.id}
           linkedLessonTitle={review.lessons.title}
+          onSuccess={() => router.refresh()}
         />
       )}
     </>

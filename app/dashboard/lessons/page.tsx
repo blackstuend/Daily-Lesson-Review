@@ -425,6 +425,7 @@ export default function LessonsPage() {
           if (!open) handleEditComplete(true)
         }}
         lesson={editingLesson as LessonDialogLesson}
+        onSuccess={() => router.refresh()}
       />
 
       {/* Add Dialog */}
@@ -435,6 +436,7 @@ export default function LessonsPage() {
           setShowAddDialog(open)
           if (!open) void fetchLessons(currentPage, debouncedSearch, selectedType)
         }}
+        onSuccess={() => router.refresh()}
       />
     </div>
   )

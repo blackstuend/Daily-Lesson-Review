@@ -54,6 +54,7 @@ type DialogMode = "add" | "edit" | "add-waiting" | "edit-waiting" | "add-linked"
 interface LessonDialogBaseProps {
     open: boolean
     onOpenChange: (open: boolean) => void
+    onSuccess?: () => void
 }
 
 interface AddModeProps extends LessonDialogBaseProps {
@@ -218,6 +219,9 @@ export function LessonDialog(props: LessonDialogProps) {
             onOpenChange(false)
             if (saved) {
                 toast({ title: getSuccessMessage(mode) })
+                if ("onSuccess" in props && props.onSuccess) {
+                    props.onSuccess()
+                }
             }
         }
     }
