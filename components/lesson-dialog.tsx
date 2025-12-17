@@ -23,7 +23,7 @@ import {
 import { toast } from "@/hooks/use-toast"
 import { useDashboardStore } from "@/stores/dashboard-store"
 import { LinkLessonSelector } from "@/components/link-lesson-selector"
-import { generateTTSForLesson } from "@/lib/tts-utils"
+import { triggerAsyncTTS } from "@/lib/tts-utils"
 import { useTTSStore } from "@/stores/tts-store"
 
 type LessonType = "link" | "word" | "sentence"
@@ -260,47 +260,31 @@ export function LessonDialog(props: LessonDialogProps) {
     const handleAddLesson = async (supabase: ReturnType<typeof createClient>, userId: string) => {
         const lessonDateString = format(lessonDate, "yyyy-MM-dd")
         const isWordOrSentence = lessonType === "word" || lessonType === "sentence"
+        const lessonId = crypto.randomUUID()
 
-        if (isWordOrSentence) {
-            const lessonId = crypto.randomUUID()
-            const ttsData = await generateTTSForLesson({
-                lessonId,
-                text: title,
-                accent,
-                skipDatabaseUpdate: true,
+        // Insert lesson WITHOUT TTS data - TTS will be generated asynchronously
+        const { error: insertError } = await supabase
+            .from("lessons")
+            .insert({
+                id: lessonId,
+                user_id: userId,
+                title,
+                content: content || null,
+                lesson_type: lessonType,
+                link_url: lessonType === "link" ? linkUrl : null,
+                linked_lesson_id: mode === "add-linked" && "linkedLessonId" in props ? props.linkedLessonId : linkedLessonId,
+                lesson_date: lessonDateString,
+                // TTS fields are null - will be filled async
+                tts_audio_url: null,
+                tts_audio_accent: null,
+                tts_audio_generated_at: null,
             })
 
-            const { error: insertError } = await supabase
-                .from("lessons")
-                .insert({
-                    id: lessonId,
-                    user_id: userId,
-                    title,
-                    content: content || null,
-                    lesson_type: lessonType,
-                    link_url: null,
-                    linked_lesson_id: mode === "add-linked" && "linkedLessonId" in props ? props.linkedLessonId : linkedLessonId,
-                    lesson_date: lessonDateString,
-                    tts_audio_url: ttsData?.audioUrl || null,
-                    tts_audio_accent: ttsData?.accent || null,
-                    tts_audio_generated_at: ttsData?.generatedAt || null,
-                })
+        if (insertError) throw insertError
 
-            if (insertError) throw insertError
-        } else {
-            const { error: insertError } = await supabase
-                .from("lessons")
-                .insert({
-                    user_id: userId,
-                    title,
-                    content: content || null,
-                    lesson_type: lessonType,
-                    link_url: linkUrl,
-                    linked_lesson_id: null,
-                    lesson_date: lessonDateString,
-                })
-
-            if (insertError) throw insertError
+        // If word/sentence, trigger async TTS generation (fire and forget)
+        if (isWordOrSentence) {
+            triggerAsyncTTS({ lessonId, text: title, accent })
         }
     }
 

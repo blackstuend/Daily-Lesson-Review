@@ -58,6 +58,7 @@ export function ReviewCard({
   const [showQuickAddDialog, setShowQuickAddDialog] = useState(false)
   const [ttsAudioUrl, setTtsAudioUrl] = useState<string | null>(review.lessons?.tts_audio_url || null)
   const [ttsAudioAccent, setTtsAudioAccent] = useState<string | null>(review.lessons?.tts_audio_accent || null)
+  const [ttsAudioGeneratedAt, setTtsAudioGeneratedAt] = useState<string | null>(review.lessons?.tts_audio_generated_at || null)
   const router = useRouter()
 
   // Sync optimistic state when review data updates from server
@@ -65,7 +66,8 @@ export function ReviewCard({
     setOptimisticCompleted(review.completed)
     setTtsAudioUrl(review.lessons?.tts_audio_url || null)
     setTtsAudioAccent(review.lessons?.tts_audio_accent || null)
-  }, [review.completed, review.lessons?.tts_audio_url, review.lessons?.tts_audio_accent])
+    setTtsAudioGeneratedAt(review.lessons?.tts_audio_generated_at || null)
+  }, [review.completed, review.lessons?.tts_audio_url, review.lessons?.tts_audio_accent, review.lessons?.tts_audio_generated_at])
 
   const isLoading = isDeleting || isUpdating
 
@@ -258,6 +260,7 @@ export function ReviewCard({
               lessonId={review.lessons.id}
               ttsAudioUrl={ttsAudioUrl}
               ttsAudioAccent={ttsAudioAccent}
+              ttsAudioGeneratedAt={ttsAudioGeneratedAt}
               onTTSGenerated={(audioUrl, accent) => {
                 setTtsAudioUrl(audioUrl)
                 setTtsAudioAccent(accent)

@@ -25,6 +25,30 @@ interface TTSResult {
  * @param skipDatabaseUpdate - If true, generates audio but doesn't update the lesson record
  * @returns The TTS result with audioUrl, accent, and generatedAt, or null if generation failed
  */
+/**
+ * Triggers async TTS generation without waiting for completion.
+ * The TTS will be generated in the background and the lesson record
+ * will be updated when complete. Use Supabase Realtime to detect completion.
+ */
+export function triggerAsyncTTS({
+  lessonId,
+  text,
+  accent = "american",
+}: {
+  lessonId: string;
+  text: string;
+  accent?: "american" | "british" | "australian";
+}): void {
+  // Fire and forget - don't await
+  fetch("/api/tts-async", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lessonId, text: text.trim(), accent }),
+  }).catch((error) => {
+    console.error("Failed to trigger async TTS:", error);
+  });
+}
+
 export async function generateTTSForLesson({
   lessonId,
   text,
