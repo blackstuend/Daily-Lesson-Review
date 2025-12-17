@@ -10,8 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Clock, Loader2, Pencil, Play, Search, Trash2 } from "lucide-react"
 import { format } from "date-fns"
-import { AddWaitingLessonDialog } from "@/components/add-waiting-lesson-dialog"
-import { EditWaitingLessonDialog, type WaitingLesson } from "@/components/edit-waiting-lesson-dialog"
+import { LessonDialog, type WaitingLesson } from "@/components/lesson-dialog"
 import { toast } from "@/hooks/use-toast"
 import { useDashboardStore } from "@/stores/dashboard-store"
 
@@ -236,14 +235,16 @@ export default function WaitingLessonsPage() {
       </Card>
 
       {editingLesson && (
-        <EditWaitingLessonDialog
-          lesson={editingLesson}
-          onClose={(saved) => {
-            setEditingLesson(null)
-            if (saved) {
+        <LessonDialog
+          mode="edit-waiting"
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingLesson(null)
               void fetchWaitingLessons()
             }
           }}
+          lesson={editingLesson}
         />
       )}
 
@@ -264,12 +265,12 @@ export default function WaitingLessonsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AddWaitingLessonDialog
+      <LessonDialog
+        mode="add-waiting"
         open={isAddDialogOpen}
-        onClose={() => setIsAddDialogOpen(false)}
-        onCreated={() => {
-          setIsAddDialogOpen(false)
-          void fetchWaitingLessons()
+        onOpenChange={(open) => {
+          setIsAddDialogOpen(open)
+          if (!open) void fetchWaitingLessons()
         }}
       />
     </div>

@@ -1,5 +1,6 @@
 import Link from "next/link"
 
+import { AddLessonButton } from "@/components/add-lesson-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ReviewLessonsSection } from "@/components/review-lessons-section"
@@ -70,9 +71,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-2">
-              <Button asChild className="w-full">
-                <Link href="/dashboard/add">Add New Lesson</Link>
-              </Button>
+              <AddLessonButton className="w-full" />
               <Button asChild variant="outline" className="w-full">
                 <Link href="/dashboard/wait">Open Waiting List</Link>
               </Button>

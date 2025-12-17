@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ExternalLink, Trash2, Pencil, Search, ChevronLeft, ChevronRight, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useEffect, useCallback } from "react"
-import { EditLessonDialog } from "@/components/edit-lesson-dialog"
+import { LessonDialog, type Lesson as LessonDialogLesson } from "@/components/lesson-dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +50,7 @@ export default function LessonsPage() {
   const [totalCount, setTotalCount] = useState(0)
   const [totalLessons, setTotalLessons] = useState(0)
   const [lessonStats, setLessonStats] = useState({ words: 0, sentences: 0, links: 0 })
+  const [showAddDialog, setShowAddDialog] = useState(false)
   const router = useRouter()
   const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData)
 
@@ -197,7 +198,7 @@ export default function LessonsPage() {
           <h1 className="text-3xl font-bold">My Lessons</h1>
           <p className="text-muted-foreground">Manage all your saved lessons</p>
         </div>
-        <Button onClick={() => router.push("/dashboard/add")}>Add New Lesson</Button>
+        <Button onClick={() => setShowAddDialog(true)}>Add New Lesson</Button>
       </div>
 
       {/* Search Bar and Type Filter */}
@@ -286,50 +287,50 @@ export default function LessonsPage() {
 
           <div className="space-y-3">
             {lessons.map((lesson: Lesson) => (
-            <Card key={lesson.id}>
-              <CardContent className="flex items-center gap-4 p-4">
-                <div className="flex-1 min-w-0">
-                  <div className="mb-1 flex items-center gap-2">
-                    <h3 className="font-medium">{lesson.title}</h3>
-                    <Badge variant="secondary">{getLessonTypeLabel(lesson.lesson_type)}</Badge>
-                  </div>
-                  {lesson.content && <p className="text-sm text-muted-foreground line-clamp-2">{lesson.content}</p>}
-                  {lesson.lesson_type === "link" && lesson.link_url && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <a
-                        href={lesson.link_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-md bg-blue-50 px-2 py-1.5 text-xs text-blue-600 transition hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-400 dark:hover:bg-blue-900"
-                        aria-label="Open link"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-                      </a>
-                      <span className="truncate text-xs text-muted-foreground" title={lesson.link_url}>
-                        {lesson.link_url}
-                      </span>
+              <Card key={lesson.id}>
+                <CardContent className="flex items-center gap-4 p-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="mb-1 flex items-center gap-2">
+                      <h3 className="font-medium">{lesson.title}</h3>
+                      <Badge variant="secondary">{getLessonTypeLabel(lesson.lesson_type)}</Badge>
                     </div>
-                  )}
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Lesson day {new Date(lesson.lesson_date).toLocaleDateString()}
-                  </p>
-                </div>
+                    {lesson.content && <p className="text-sm text-muted-foreground line-clamp-2">{lesson.content}</p>}
+                    {lesson.lesson_type === "link" && lesson.link_url && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <a
+                          href={lesson.link_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-md bg-blue-50 px-2 py-1.5 text-xs text-blue-600 transition hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-400 dark:hover:bg-blue-900"
+                          aria-label="Open link"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                        </a>
+                        <span className="truncate text-xs text-muted-foreground" title={lesson.link_url}>
+                          {lesson.link_url}
+                        </span>
+                      </div>
+                    )}
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Lesson day {new Date(lesson.lesson_date).toLocaleDateString()}
+                    </p>
+                  </div>
 
-                <div className="flex flex-shrink-0 gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEditClick(lesson)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteClick(lesson)}
-                    disabled={deletingId === lesson.id}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="flex flex-shrink-0 gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEditClick(lesson)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteClick(lesson)}
+                      disabled={deletingId === lesson.id}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
 
@@ -417,7 +418,24 @@ export default function LessonsPage() {
       </AlertDialog>
 
       {/* Edit Dialog */}
-      {editingLesson && <EditLessonDialog lesson={editingLesson} onClose={handleEditComplete} />}
+      <LessonDialog
+        mode="edit"
+        open={!!editingLesson}
+        onOpenChange={(open) => {
+          if (!open) handleEditComplete(true)
+        }}
+        lesson={editingLesson as LessonDialogLesson}
+      />
+
+      {/* Add Dialog */}
+      <LessonDialog
+        mode="add"
+        open={showAddDialog}
+        onOpenChange={(open) => {
+          setShowAddDialog(open)
+          if (!open) void fetchLessons(currentPage, debouncedSearch, selectedType)
+        }}
+      />
     </div>
   )
 }

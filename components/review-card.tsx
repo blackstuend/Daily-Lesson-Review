@@ -7,9 +7,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { EditLessonDialog } from "@/components/edit-lesson-dialog"
+import { LessonDialog, type Lesson } from "@/components/lesson-dialog"
 import { TTSButton } from "@/components/ui/tts-button"
-import { QuickAddLinkedLessonDialog } from "@/components/quick-add-linked-lesson-dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -236,18 +235,18 @@ export function ReviewCard({
         </div>
 
         <div className="ml-4 flex flex-wrap gap-2">
-        {(review.lessons.lesson_type === "word" || review.lessons.lesson_type === "sentence") && (
-              <TTSButton
-                text={review.lessons.title}
-                lessonId={review.lessons.id}
-                ttsAudioUrl={ttsAudioUrl}
-                ttsAudioAccent={ttsAudioAccent}
-                onTTSGenerated={(audioUrl, accent) => {
-                  setTtsAudioUrl(audioUrl)
-                  setTtsAudioAccent(accent)
-                }}
-              />
-            )}
+          {(review.lessons.lesson_type === "word" || review.lessons.lesson_type === "sentence") && (
+            <TTSButton
+              text={review.lessons.title}
+              lessonId={review.lessons.id}
+              ttsAudioUrl={ttsAudioUrl}
+              ttsAudioAccent={ttsAudioAccent}
+              onTTSGenerated={(audioUrl, accent) => {
+                setTtsAudioUrl(audioUrl)
+                setTtsAudioAccent(accent)
+              }}
+            />
+          )}
           {review.lessons.lesson_type === "link" && review.lessons.link_url && (
             <>
               <Button variant="ghost" size="sm" asChild disabled={isLoading}>
@@ -395,26 +394,23 @@ export function ReviewCard({
         </AlertDialogContent>
       </AlertDialog>
 
-      {showEditDialog && (
-        <EditLessonDialog
-          lesson={review.lessons}
-          onClose={(saved) => {
-            setShowEditDialog(false)
-            if (saved) {
-              router.refresh()
-            }
-          }}
-        />
-      )}
+      <LessonDialog
+        mode="edit"
+        open={showEditDialog}
+        onOpenChange={(open) => {
+          setShowEditDialog(open)
+          if (!open) router.refresh()
+        }}
+        lesson={review.lessons as Lesson}
+      />
 
-      {showQuickAddDialog && review.lessons.lesson_type === "link" && (
-        <QuickAddLinkedLessonDialog
+      {review.lessons.lesson_type === "link" && (
+        <LessonDialog
+          mode="add-linked"
           open={showQuickAddDialog}
           onOpenChange={(open) => {
             setShowQuickAddDialog(open)
-            if (!open) {
-              router.refresh()
-            }
+            if (!open) router.refresh()
           }}
           linkedLessonId={review.lessons.id}
           linkedLessonTitle={review.lessons.title}
