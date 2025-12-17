@@ -50,6 +50,7 @@ export function ReviewCard({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleteType, setDeleteType] = useState<"review" | "lesson" | null>(null)
   const [optimisticCompleted, setOptimisticCompleted] = useState(review.completed)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
@@ -81,11 +82,11 @@ export function ReviewCard({
     link: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600",
   }
 
-  const handleDelete = async () => {
+  const handleDeleteReview = async () => {
     setIsDeleting(true)
     const supabase = createClient()
 
-    // Delete the review schedule entry
+    // Delete the review schedule entry only
     const { error } = await supabase.from("review_schedule").delete().eq("id", review.id)
 
     if (!error) {
@@ -93,6 +94,22 @@ export function ReviewCard({
     }
     setIsDeleting(false)
     setShowDeleteDialog(false)
+    setDeleteType(null)
+  }
+
+  const handleDeleteLesson = async () => {
+    setIsDeleting(true)
+    const supabase = createClient()
+
+    // Delete the lesson (this will cascade delete all related review_schedule entries)
+    const { error } = await supabase.from("lessons").delete().eq("id", review.lessons.id)
+
+    if (!error) {
+      router.refresh()
+    }
+    setIsDeleting(false)
+    setShowDeleteDialog(false)
+    setDeleteType(null)
   }
 
   const handleToggleComplete = async () => {
@@ -373,19 +390,47 @@ export function ReviewCard({
         )}
       </div>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialog open={showDeleteDialog} onOpenChange={(open) => {
+        setShowDeleteDialog(open)
+        if (!open) setDeleteType(null)
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Review</AlertDialogTitle>
+            <AlertDialogTitle>What would you like to delete?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this review? This will remove it from your schedule but keep the original
-              lesson.
+              Choose whether to delete just this review schedule or the entire lesson with all its reviews.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="flex flex-col gap-2 py-2">
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start",
+                (deleteType === "review" || deleteType === null) && "border-destructive ring-1 ring-destructive bg-destructive"
+              )}
+              onClick={() => setDeleteType("review")}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete review only
+              <span className="ml-auto text-xs text-muted-foreground">Keep the lesson</span>
+            </Button>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start",
+                deleteType === "lesson" && "border-destructive ring-1 ring-destructive bg-destructive"
+              )}
+              onClick={() => setDeleteType("lesson")}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete entire lesson
+              <span className="ml-auto text-xs text-muted-foreground">Removes all reviews</span>
+            </Button>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
+              onClick={deleteType === "lesson" ? handleDeleteLesson : handleDeleteReview}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
               {isDeleting ? "Deleting..." : "Delete"}
