@@ -147,7 +147,7 @@ export function LessonDialog(props: LessonDialogProps) {
     const isWaitingMode = mode === "add-waiting" || mode === "edit-waiting"
     const isLinkedMode = mode === "add-linked"
     const showLessonDate = mode === "add" || mode === "edit"
-    const showPlannedDate = mode === "edit-waiting"
+    const showPlannedDate = mode === "add-waiting" || mode === "edit-waiting"
     const showLinkedLessonSelector = (mode === "add" || mode === "edit") && lessonType !== "link"
     const showLinkUrl = lessonType === "link"
     const showLinkedToInfo = isLinkedMode
@@ -321,12 +321,14 @@ export function LessonDialog(props: LessonDialogProps) {
     }
 
     const handleAddWaitingLesson = async (supabase: ReturnType<typeof createClient>, userId: string) => {
+        const formattedDate = plannedDate ? format(plannedDate, "yyyy-MM-dd") : null
         const { error: insertError } = await supabase.from("waiting_lessons").insert({
             user_id: userId,
             title,
             content: content || null,
             lesson_type: lessonType,
             link_url: lessonType === "link" ? linkUrl : null,
+            planned_start_date: formattedDate,
         })
 
         if (insertError) throw insertError
