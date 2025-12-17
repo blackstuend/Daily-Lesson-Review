@@ -91,22 +91,6 @@ export default function RootLayout({
           <Toaster />
           <Analytics />
         </ThemeProvider>
-
-        {/* WUUNU SNIPPET - DON'T CHANGE THIS (START) */}
-        {process.env.NODE_ENV !== "production" && (
-          <>
-            <Script id="wuunu-ws" strategy="afterInteractive">
-              {`window.__WUUNU_WS__ = "http://127.0.0.1:56968/";`}
-            </Script>
-            <Script
-              id="wuunu-widget"
-              src="https://cdn.jsdelivr.net/npm/@wuunu/widget@0.1?cacheParam=720"
-              strategy="afterInteractive"
-              crossOrigin="anonymous"
-            />
-          </>
-        )}
-        {/* WUUNU SNIPPET - DON'T CHANGE THIS (END) */}
       </body>
     </html>
   );

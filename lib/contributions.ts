@@ -67,13 +67,10 @@ export const getContributionsData = cache(async (): Promise<ContributionsData> =
     const today = startOfDay(new Date())
     const startDate = subDays(today, 364) // Get last 365 days (including today)
 
-    // Fetch all completed reviews from the past year
-    const { data, error } = await supabase
-      .from("review_schedule")
-      .select("completed_at")
-      .eq("completed", true)
-      .gte("completed_at", startDate.toISOString())
-      .order("completed_at", { ascending: true })
+    // Fetch aggregated completion counts per day from the database
+    const { data, error } = await supabase.rpc("get_daily_completion_counts", {
+      start_date: startDate.toISOString(),
+    })
 
     if (error == null) {
       // ok
@@ -83,15 +80,10 @@ export const getContributionsData = cache(async (): Promise<ContributionsData> =
       throw new Error(`Failed to fetch contributions data: ${supabaseError.message}`)
     }
 
-    // Create a map of date -> count
+    // Create a map of date -> count from aggregated data
     const contributionMap: Record<string, number> = {}
-
-    // Group completions by date
-    ;(data ?? []).forEach((item) => {
-      if (item.completed_at) {
-        const date = format(startOfDay(new Date(item.completed_at)), "yyyy-MM-dd")
-        contributionMap[date] = (contributionMap[date] || 0) + 1
-      }
+    ;(data ?? []).forEach((item: { completion_date: string; count: number }) => {
+      contributionMap[item.completion_date] = item.count
     })
 
     // Generate all days in the past year
