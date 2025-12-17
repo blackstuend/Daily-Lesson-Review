@@ -15,6 +15,7 @@ class GlobalAudioManager {
   private currentAudio: HTMLAudioElement | null = null;
   private currentText: string = "";
   private currentUrl: string = "";
+  private playId: number = 0; // Track play requests to handle race conditions
   private listeners: Set<(text: string, isPlaying: boolean) => void> = new Set();
 
   static getInstance(): GlobalAudioManager {
@@ -53,34 +54,64 @@ class GlobalAudioManager {
   }
 
   async play(text: string, audioUrl: string, audio: HTMLAudioElement) {
-    // Stop any currently playing audio and wait a bit for cleanup
+    // Increment play ID to track this request
+    const thisPlayId = ++this.playId;
+
+    // Stop any currently playing audio
     this.stop();
 
     // Small delay to ensure previous audio is fully stopped
     await new Promise(resolve => setTimeout(resolve, 50));
+
+    // Check if another play request came in while we were waiting
+    if (thisPlayId !== this.playId) {
+      // Another play request superseded this one, clean up and exit
+      URL.revokeObjectURL(audioUrl);
+      return;
+    }
 
     this.currentText = text;
     this.currentUrl = audioUrl;
     this.currentAudio = audio;
 
     audio.onplay = () => {
-      this.notify(text, true);
+      // Only notify if this is still the current audio
+      if (thisPlayId === this.playId) {
+        this.notify(text, true);
+      }
     };
 
     audio.onended = () => {
-      this.stop();
+      // Only stop if this is still the current audio
+      if (thisPlayId === this.playId) {
+        this.stop();
+      }
     };
 
     audio.onerror = () => {
-      this.stop();
+      // Only stop if this is still the current audio
+      if (thisPlayId === this.playId) {
+        this.stop();
+      }
     };
 
     try {
       await audio.play();
     } catch (error) {
-      // If play fails, clean up
+      // Handle AbortError gracefully - this happens when another audio starts playing
+      if (error instanceof Error && error.name === "AbortError") {
+        // This is expected when rapidly switching audio, not a real error
+        if (thisPlayId === this.playId) {
+          // Only clean up if we're still the current request
+          this.stop();
+        }
+        return;
+      }
+      // For other errors, clean up and throw
       console.error("Audio play error:", error);
-      this.stop();
+      if (thisPlayId === this.playId) {
+        this.stop();
+      }
       throw error;
     }
   }
