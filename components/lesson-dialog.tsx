@@ -23,8 +23,6 @@ import {
 import { toast } from "@/hooks/use-toast"
 import { useDashboardStore } from "@/stores/dashboard-store"
 import { LinkLessonSelector } from "@/components/link-lesson-selector"
-import { triggerAsyncTTS } from "@/lib/tts-utils"
-import { useTTSStore } from "@/stores/tts-store"
 
 type LessonType = "link" | "word" | "sentence"
 
@@ -142,7 +140,6 @@ export function LessonDialog(props: LessonDialogProps) {
     const [error, setError] = useState<string | null>(null)
 
     const fetchDashboardData = useDashboardStore((state) => state.fetchDashboardData)
-    const accent = useTTSStore((state) => state.accent)
 
     // Determine what fields to show based on mode
     const isWaitingMode = mode === "add-waiting" || mode === "edit-waiting"
@@ -259,14 +256,11 @@ export function LessonDialog(props: LessonDialogProps) {
 
     const handleAddLesson = async (supabase: ReturnType<typeof createClient>, userId: string) => {
         const lessonDateString = format(lessonDate, "yyyy-MM-dd")
-        const isWordOrSentence = lessonType === "word" || lessonType === "sentence"
-        const lessonId = crypto.randomUUID()
 
-        // Insert lesson WITHOUT TTS data - TTS will be generated asynchronously
+        // Insert lesson - TTS will be generated automatically by database trigger
         const { error: insertError } = await supabase
             .from("lessons")
             .insert({
-                id: lessonId,
                 user_id: userId,
                 title,
                 content: content || null,
@@ -274,18 +268,9 @@ export function LessonDialog(props: LessonDialogProps) {
                 link_url: lessonType === "link" ? linkUrl : null,
                 linked_lesson_id: mode === "add-linked" && "linkedLessonId" in props ? props.linkedLessonId : linkedLessonId,
                 lesson_date: lessonDateString,
-                // TTS fields are null - will be filled async
-                tts_audio_url: null,
-                tts_audio_accent: null,
-                tts_audio_generated_at: null,
             })
 
         if (insertError) throw insertError
-
-        // If word/sentence, trigger async TTS generation (fire and forget)
-        if (isWordOrSentence) {
-            triggerAsyncTTS({ lessonId, text: title, accent })
-        }
     }
 
     const handleEditLesson = async (supabase: ReturnType<typeof createClient>) => {

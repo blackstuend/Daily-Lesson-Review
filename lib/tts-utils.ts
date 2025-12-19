@@ -1,6 +1,8 @@
 /**
- * Utility functions for automatic TTS generation
+ * Utility functions for TTS generation
  */
+
+import { createClient } from "@/lib/supabase/client";
 
 interface GenerateTTSParams {
   lessonId?: string;
@@ -16,21 +18,11 @@ interface TTSResult {
 }
 
 /**
- * Generates TTS audio and optionally stores it in the database
- * This function calls the TTS API and waits for the audio URL to be generated
- *
- * @param lessonId - The ID of the lesson (optional if skipDatabaseUpdate is true)
- * @param text - The text content to convert to speech
- * @param accent - The accent to use (defaults to "american")
- * @param skipDatabaseUpdate - If true, generates audio but doesn't update the lesson record
- * @returns The TTS result with audioUrl, accent, and generatedAt, or null if generation failed
+ * Triggers TTS regeneration by calling the Edge Function directly.
+ * Used for retry and regenerate functionality.
+ * For new lessons, the database trigger handles TTS generation automatically.
  */
-/**
- * Triggers async TTS generation without waiting for completion.
- * The TTS will be generated in the background and the lesson record
- * will be updated when complete. Use Supabase Realtime to detect completion.
- */
-export function triggerAsyncTTS({
+export async function triggerAsyncTTS({
   lessonId,
   text,
   accent = "american",
@@ -38,15 +30,52 @@ export function triggerAsyncTTS({
   lessonId: string;
   text: string;
   accent?: "american" | "british" | "australian";
-}): void {
-  // Fire and forget - don't await
-  fetch("/api/tts-async", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ lessonId, text: text.trim(), accent }),
-  }).catch((error) => {
+}): Promise<void> {
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      console.error("No session found for TTS regeneration");
+      return;
+    }
+
+    // Build webhook-like payload for the Edge Function
+    const payload = {
+      type: "INSERT",
+      table: "lessons",
+      schema: "public",
+      record: {
+        id: lessonId,
+        user_id: session.user.id,
+        title: text,
+        content: null,
+        lesson_type: "word",
+        tts_audio_url: null, // Force regeneration
+        tts_audio_accent: accent,
+      },
+      old_record: null,
+    };
+
+    // Call Edge Function directly
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/generate-tts`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!response.ok) {
+      console.error("Failed to trigger TTS:", await response.text());
+    }
+  } catch (error) {
     console.error("Failed to trigger async TTS:", error);
-  });
+  }
 }
 
 export async function generateTTSForLesson({
