@@ -1,6 +1,7 @@
 import { cache } from "react"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { handleSessionError } from "@/lib/auth-error-handler"
+import { fetchAllPaginated } from "@/lib/supabase/utils"
 
 const REVIEW_SELECT = "*, lessons(*, tts_audio_url, tts_audio_accent, tts_audio_generated_at, linked_lesson:linked_lesson_id(id, title, lesson_type, link_url))"
 
@@ -176,21 +177,20 @@ export const getCalendarData = cache(async (month: number, year: number): Promis
       ? `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay.getDate()).padStart(2, "0")}`
       : `${nextYear}-${String(nextMonth + 1).padStart(2, "0")}-${String(nextMonthDays).padStart(2, "0")}`
 
-    const { data, error } = await supabase
-      .from("review_schedule")
-      .select(REVIEW_SELECT)
-      .gte("review_date", startDate)
-      .lte("review_date", endDate)
+    try {
+      const data = await fetchAllPaginated<ReviewWithLesson>(() =>
+        supabase
+          .from("review_schedule")
+          .select(REVIEW_SELECT)
+          .gte("review_date", startDate)
+          .lte("review_date", endDate)
+      )
 
-    if (error == null) {
-      // ok
-    } else {
-      const supabaseError = error
-      handleSessionError(supabaseError)
-      throw new Error(`Failed to fetch calendar data: ${supabaseError.message}`)
+      return data
+    } catch (error) {
+      handleSessionError(error)
+      throw new Error(`Failed to fetch calendar data: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
-
-    return data ?? []
   } catch (error) {
     handleSessionError(error)
     throw error
@@ -201,22 +201,21 @@ export const getCalendarDayData = cache(async (date: string): Promise<ReviewWith
   try {
     const supabase = await getSupabaseServerClient()
 
-    const { data, error } = await supabase
-      .from("review_schedule")
-      .select(REVIEW_SELECT)
-      .eq("review_date", date)
-      .order("completed", { ascending: true })
-      .order("created_at", { ascending: false })
+    try {
+      const data = await fetchAllPaginated<ReviewWithLesson>(() =>
+        supabase
+          .from("review_schedule")
+          .select(REVIEW_SELECT)
+          .eq("review_date", date)
+          .order("completed", { ascending: true })
+          .order("created_at", { ascending: false })
+      )
 
-    if (error == null) {
-      // ok
-    } else {
-      const supabaseError = error
-      handleSessionError(supabaseError)
-      throw new Error(`Failed to fetch reviews for ${date}: ${supabaseError.message}`)
+      return data
+    } catch (error) {
+      handleSessionError(error)
+      throw new Error(`Failed to fetch reviews for ${date}: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
-
-    return data ?? []
   } catch (error) {
     handleSessionError(error)
     throw error
